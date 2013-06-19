@@ -1,0 +1,6 @@
+
+<?php $__env->startSection('form_header'); ?>
+    <?php echo Form::model($post, array('route' => array('posts.update', $post->id), 'method' => 'put')); ?>
+<?php $__env->stopSection(); ?>
+
+<?php echo $__env->make('posts/form', array_except(get_defined_vars(), array('__data', '__path')))->render(); ?>

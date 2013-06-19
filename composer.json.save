@@ -1,0 +1,54 @@
+{
+	"require": {
+		"laravel/framework": "4.0.*",
+		"jquery/jquery": "*",
+		"
+	},
+	"autoload": {
+		"classmap": [
+			"app/commands",
+			"app/controllers",
+			"app/models",
+			"app/database/migrations",
+			"app/database/seeds",
+			"app/tests/TestCase.php"
+		]
+	},
+	"scripts": {
+		"pre-update-cmd": [
+			"php artisan clear-compiled"
+		],
+		"post-install-cmd": [
+			"php artisan optimize"
+		],
+		"post-update-cmd": [
+			"php artisan optimize"
+		]
+	},
+	"config": {
+		"preferred-install": "dist"
+	},
+	"minimum-stability": "dev",
+    "repositories": [  
+        {  
+            "type": "package",  
+            "package": {  
+                "name": "jquery/jquery",  
+                "version": "1.9-stable",  
+                "source":{  
+                    "url":"https://github.com/jquery/jquery.git",  
+                    "type":"git",  
+                    "reference":"master"  
+                }  
+            }  
+        },
+	{
+    		"name": "twitter/bootstrap",
+  		"description": "Sleek, intuitive, and powerful front-end framework for faster and easier web development.",
+  		"keywords": ["bootstrap", "css"],
+  		"homepage": "http://twitter.github.com/bootstrap/"
+  		"author": "Twitter Inc."
+  		"license": "Apache-2.0"
+	}  
+    ]  
+}

@@ -1,0 +1,127 @@
+body {
+	background-color: #090909;
+	color: #d6d6d6;
+	background: url("/img/small-giraffe.png") no-repeat fixed 0 0 #090909;
+	//background: url('http://tof.canardpc.com/view/03b0afe9-0b05-4d81-aa61-33cc43412132.jpg');
+	//background-repeat:no-repeat;
+	//background-attachment:fixed;
+	font-family: 'Andale Mono', monospace;
+}
+
+blockquote p {
+	font-size: 14px;
+}
+
+a {
+	color: #00BB88;
+}
+a:hover {
+	color: #008055;
+}
+
+.show-grid [class*="span"] {
+  text-align: center;
+  min-height: 40px;
+  line-height: 20px;
+}
+.left-bordered{
+	border-left: 1px solid;
+	padding-left: 2px;
+}
+
+.text-post {
+	padding-top: 0px;
+	padding-bottom: 60px;
+}
+
+.body_post p, .body_post ul, .body_post ol, .body_post pre{
+	text-align: left;
+}
+
+object {
+	text-align: center;
+}
+
+.body_post p:first-of-type:first-letter{
+	font-size: 17.5px;
+	color: #00BB88;
+	margin-left: 15px;
+	font-weight: bold;
+	text-transform: uppercase;
+}
+
+.text-left p{
+	text-align: left;
+}
+
+.redactor_editor{
+	background-color: #090909 !important;
+}
+
+.top-post {
+    height: 60px;
+    display: block;
+}
+
+.bottom-post {
+    height: 60px;
+    display: block;
+}
+
+
+.top-cross{
+	display: none;
+}
+
+.bottom-fleche{
+	display: none;
+}
+
+@media (min-width: 768px) {
+	#loginSubmit {
+		position: absolute;
+	}
+
+	.top-cross{
+		display: block;
+        	position: relative;
+        	float: left;
+        	left: -5px;
+        	top: 23px;
+        	width: 50px;
+        	height: 50px;
+        	background: url('/img/croix2.png');
+	}
+
+	.bottom-fleche{
+		display: block;
+        	position: relative;
+        	float: left;
+        	left: -4px;
+        	top: -28px;
+        	width: 50px;
+        	height: 50px;
+        	background: url('/img/fleche.png');
+	}
+}
+
+
+@media (min-width: 980px) {
+.top-cross{
+        left: -1px;
+}
+
+.bottom-fleche{
+        left: 0px;
+}
+}
+
+@media (min-width: 1200px) {
+.top-cross{
+        left: 8px;
+}
+
+.bottom-fleche{
+        left: 9px;
+}
+}

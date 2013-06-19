@@ -1,0 +1,6 @@
+
+<?php $__env->startSection('form_header'); ?>
+    <?php echo Form::model(array(), array('route' => array('posts.store'), 'method' => 'post')); ?>
+<?php $__env->stopSection(); ?>
+
+<?php echo $__env->make('posts/form', array_except(get_defined_vars(), array('__data', '__path')))->render(); ?>
