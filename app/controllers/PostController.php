@@ -101,11 +101,12 @@ class PostController extends \BaseController
 
         $postViews = array();
         $view = '';
+        $post = Post::with('user')->find($id);
+
         if (!Auth::check()) {
             $view = Cache::section('posts')->rememberForever(
                 'view_'.$id, function() use($id)
                 {
-                    $post = Post::with('user')->find($id);
                     if (!$post) {
                         return Redirect::to('posts');
                     }
@@ -113,7 +114,6 @@ class PostController extends \BaseController
                 }
             );
         } else {
-            $post = Post::with('user')->find($id);
             if (!$post) {
                 return Redirect::to('posts');
             }
@@ -121,7 +121,7 @@ class PostController extends \BaseController
         }
         $postViews[] = $view;
 
-        return View::make('posts/posts')->with('post_views', $postViews);
+        return View::make('posts/posts')->with('post_views', $postViews)->with('title', $post->title);
     }
 
 
@@ -208,6 +208,7 @@ class PostController extends \BaseController
         $this->_flush();
         return 'ok';
     }
+
 
     /**
      * Update the specified resource in storage.
