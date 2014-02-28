@@ -1,6 +1,8 @@
 var isLoading = false;
 
-$('.ajax-loader').slideDown('500');
+if (navigator.onLine) {
+	$('.ajax-loader').slideDown('500');
+} 
 
 var loadIfBottom = function() {
 	var scroll = $(document).height() - ($(window).height() + $(window).scrollTop());

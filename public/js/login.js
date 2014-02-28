@@ -1,12 +1,16 @@
+if (!navigator.onLine) {
+  $('#connectionOrAdd').hide();
+}
+
 $('#login').click(function() {
-  		if ($('#login').html() == '+') {
-  			$('#login').html('-');
-  			$('#loginForm').show();
-  		} else {
-  			$('#login').html('+');
-  			$('#loginForm').hide();
-  		}
-  	});
+	if ($('#login').html() == '+') {
+		$('#login').html('-');
+		$('#loginForm').show();
+	} else {
+		$('#login').html('+');
+		$('#loginForm').hide();
+	}
+});
 
 var loginSubmit = document.getElementById('loginSubmit');
 if (loginSubmit) {

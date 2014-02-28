@@ -1,101 +1,110 @@
-<?php $withPersona = 0; ?>
+<?php $withPersona = 1; ?>
 <!doctype html>
-	<html lang="fr">
-	<head>
-	    <meta http-equiv="X-UA-Compatible" content="IE=Edge">
-	    <meta charset="utf-8">
-	    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <?php foreach ($resources['css_before'] as $resource): ?>
-                <link href="/css/<?php echo $resource; ?>" rel="stylesheet">
-            <?php endforeach; ?>
-        <link rel="alternate" type="application/rss+xml" href="<?php echo URL::to('rss.xml'); ?>" title="Votre titre">
-	    <link href="/css/bootstrap.min.css" rel="stylesheet" media="screen">
-	    <link href="/css/bootstrap-responsive.min.css" rel="stylesheet">
-	    <link href="/css/style.css" rel="stylesheet">
-	    <?php foreach ($resources['css_after'] as $resource): ?>
-	    	<link href="/css/<?php echo $resource; ?>" rel="stylesheet">
-	    <?php endforeach; ?>
-	    <style type="text/css">
-            <?php foreach ($resources['css_fx'] as $resource): ?>
+<html lang="fr">
+<head>
+	<meta name="google-site-verification" content="A_Kgxs0C5FENQ7zC0mSEoyDBsbW-s2agCbhpsOSJJ0c" />
+	<meta http-equiv="X-UA-Compatible" content="IE=Edge">
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<?php foreach ($resources['css_before'] as $resource): ?>
+	<link href="/css/<?php echo $resource; ?>" rel="stylesheet">
+	<?php endforeach; ?>
+	<link rel="alternate" type="application/rss+xml" href="<?php echo URL::to('rss.xml'); ?>" title="Votre titre">
+	<link href="/css/bootstrap.min.css" rel="stylesheet" media="screen">
+	<link href="/css/bootstrap-responsive.min.css" rel="stylesheet">
+	<link href="/css/style.css" rel="stylesheet">
+	<?php foreach ($resources['css_after'] as $resource): ?>
+	<link href="/css/<?php echo $resource; ?>" rel="stylesheet">
+	<?php endforeach; ?>
+	<style type="text/css">
+		<?php foreach ($resources['css_fx'] as $resource): ?>
 		<?php echo $resource; ?>
-	    <?php endforeach; ?>
-  	    </style>
-	    <title>Sérendipité (et épectase)</title>
-	</head>
-	<body>
-		<div class="container">
-			<div class="row-fluid show-grid">
-				<div class="span9 offset2">
-					<h1 style=''><a href='/'>Un blog de ouf</a></h1>
-				</div>
-				<?php if ($withPersona): ?>
-					<div class="span1">
-						<?php if (Auth::check()): ?>
-							 <a href="<?php echo URL::route('posts.create'); ?>">
-							 	A
-							 </a> &nbsp;
-							 <a href='#' id='signout'>
-							 	-
-							 </a>
-						 <?php else: ?>
-							 <a href='#' id='signin'>
-							 	+
-							 </a>
-						 <?php endif; ?>
-					</div>
+		<?php endforeach; ?>
+	</style>
+	<title>
+		<?php $__env->startSection('title'); ?>
+			Sérendipité (et épectase)
+		<?php echo $__env->yieldSection(); ?>
+	</title>
+</head>
+<body>
+	<div class="container">
+		<div class="row-fluid show-grid">
+			<div class="span9 offset2">
+				<h1 style=''><a href='/'>Sérendipité (et épectase)</a></h1>
+			</div>
+			<?php if ($withPersona): ?>
+			<div class="span1" id='connectionOrAdd' style='display:block;'>
+				<?php if (Auth::check()): ?>
+				<a href="<?php echo URL::route('posts.create'); ?>">
+					A
+				</a> &nbsp;
+				<a href='#' id='signout'>
+					-
+				</a>
 				<?php else: ?>
-					<div class="span1">
-						<?php if (Auth::check()): ?>
-							 <a href="<?php echo URL::route('posts.create'); ?>">
-							 	A
-							 </a> &nbsp;
-							 <a href='#' id='logout'>
-							 	-
-							 </a>
-						 <?php else: ?>
-							 <a href='#' id='login'>+</a>
-							 <div id='loginForm' style="display: none;">
-								<?php echo Form::model(array(), array('id' => 'loginSubmit', 'url' => 'auth/login', 'method' => 'post')); ?>
-		    					<?php echo Form::label('email', 'email'); ?>
-								<?php echo Form::email('email', null, array('placeholder' => 'email')); ?>
-		    					<?php echo Form::label('password', 'password'); ?>
-								<?php echo Form::password('password', null, array('placeholder' => 'password')); ?>
-		    					<?php echo Form::label('', ''); ?>
-								<?php echo Form::submit('Connecter'); ?>
-								<?php echo Form::close(); ?>
-							 </div>
-						 <?php endif; ?>
-					</div>
+				<a href='#' id='signin'>
+					+
+				</a>
 				<?php endif; ?>
-	        	<?php echo $__env->yieldContent('content'); ?>
-	        </div>
-	    </div>
-    <script src="/js/jquery.min.js"></script>
-    <script src="/js/bootstrap.min.js"></script>
+			</div>
+			<?php else: ?>
+			<div class="span1" id='connectionOrAdd' style='display:block;'>
+				<?php if (Auth::check()): ?>
+				<a href="<?php echo URL::route('posts.create'); ?>">
+					A
+				</a> &nbsp;
+				<a href='#' id='logout'>
+					-
+				</a>
+				<?php else: ?>
+				<a href='#' id='login'>+</a>
+				<div id='loginForm' style="display: none;">
+					<?php echo Form::model(array(), array('id' => 'loginSubmit', 'url' => 'auth/login', 'method' => 'post')); ?>
+					<?php echo Form::label('email', 'email'); ?>
+					<?php echo Form::email('email', null, array('placeholder' => 'email')); ?>
+					<?php echo Form::label('password', 'password'); ?>
+					<?php echo Form::password('password', null, array('placeholder' => 'password')); ?>
+					<?php echo Form::label('', ''); ?>
+					<?php echo Form::submit('Connecter'); ?>
+					<?php echo Form::close(); ?>
+				</div>
+				<?php endif; ?>
+			</div>
+			<?php endif; ?>
+			<?php echo $__env->yieldContent('content'); ?>
+		</div>
+	</div>
+	<script src="/js/jquery.min.js"></script>
+	<script src="/js/bootstrap.min.js"></script>
 	<?php if ($withPersona): ?>
-    	<script src="https://login.persona.org/include.js"></script>
-    <?php endif; ?>
-
-<script type="text/javascript">
-var currentUser = <?php echo (Auth::check()) ? "'".Auth::user()->email."'" : "null"; ?>;
-</script>
-      	<?php if ($withPersona): ?>
-    		<script src="/js/login-with-persona.js"></script>
-		<?php else: ?>
-    		<script src="/js/login.js"></script>
-		<?php endif; ?>
-
-	    <?php foreach ($resources['js'] as $resource): ?>
-	    	<script src="/js/<?php echo $resource; ?>"></script>
-	    <?php endforeach; ?>
-
-		<script type="text/javascript">
-(function() {
-    <?php foreach ($resources['js_fx'] as $resource): ?>
-    	<?php echo $resource; ?>
-    <?php endforeach; ?>
-})();
-		</script>
-		
-    </body>
+	<script src="https://login.persona.org/include.js"></script>
+	<?php endif; ?>
+	<script type="text/javascript">
+		var currentUser = <?php echo (Auth::check()) ? "'".Auth::user()->email."'" : "null"; ?>;
+	</script>
+	<?php if ($withPersona): ?>
+	<script src="/js/login-with-persona.js"></script>
+	<?php else: ?>
+	<script src="/js/login.js"></script>
+	<?php endif; ?>
+	<?php foreach ($resources['js'] as $resource): ?>
+	<script src="/js/<?php echo $resource; ?>"></script>
+	<?php endforeach; ?>
+	<script type="text/javascript">
+		(function() {
+			<?php foreach ($resources['js_fx'] as $resource): ?>
+			<?php echo $resource; ?>
+			<?php endforeach; ?>
+		})();
+	</script>
+	<script>
+		(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+			(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+			m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+		})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+		ga('create', 'UA-48510360-1', '.stadja.net');
+		ga('send', 'pageview');
+	</script>
+</body>
 </html>

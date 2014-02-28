@@ -25,14 +25,21 @@ Route::filter('auth_post', function() {
 });
 Route::resource('posts', 'PostController');
 
+Route::get('last', function() {
+	$post = Post::orderBy('posted_at', 'desc')->where('published', 1)->first();
+	return Redirect::route('posts.show', $post->id);
+});
+
 Route::group(array('prefix' => 'posts'), function()
 {
+
 	Route::get('create', array('before' => 'auth', 'uses' => 'PostController@create'));
 	Route::post('/', array('before' => 'auth', 'uses' => 'PostController@store'));
 	Route::get('{id}/edit', array('before' => 'auth', 'uses' => 'PostController@edit'));
 	Route::put('{id}/edit', array('before' => 'auth', 'uses' => 'PostController@update'));
 	Route::any('by_network', array('before' => 'auth_post', 'uses' => 'PostController@by_network'));
 	Route::get('offset/{offset}', 'PostController@offset' );
+
 });
 
 Route::get('flush', 'PostController@flush' );
@@ -56,7 +63,7 @@ Route::group(array('prefix' => 'auth'), function()
 		}
 
 		$postFields = array('assertion' => Input::get('assertion'),
-							'audience' => URL::to('').':80');
+			'audience' => URL::to('').':80');
 
 		$options=array(
 			CURLOPT_URL            => "https://verifier.login.persona.org/verify",       // Url cible (l'url de la page que vous voulez télécharger)
@@ -65,7 +72,7 @@ Route::group(array('prefix' => 'auth'), function()
 			CURLOPT_FAILONERROR    => true,       // Gestion des codes d'erreur HTTP supérieurs ou égaux à 400
 			CURLOPT_POST           => true,       // Effectuer une requête de type POST
 			CURLOPT_POSTFIELDS     => http_build_query($postFields) // Le tableau associatif contenant les variables envoyées par POST au serveur
-		);
+			);
 
 		$CURL=curl_init();
 		// Erreur suffisante pour justifier un die()
@@ -74,13 +81,13 @@ Route::group(array('prefix' => 'auth'), function()
 		}
 		// Configuration des options de téléchargement
 		curl_setopt_array($CURL,$options);
-		$content=curl_exec($CURL);  
+		$content=curl_exec($CURL);
 		curl_close($CURL);
 
 		if($content == 'false'){
 			var_dump(curl_error($CURL));
 			die("ERREUR curl.");
-		}	
+		}
 
 		$content = json_decode($content);
 		if (isset($content->status) && ($content->status == "okay")) {
@@ -102,7 +109,7 @@ Route::bind('user', function($value, $route)
 Route::group(array('prefix' => '{user}'), function()
 {
 	Route::get('password', function($user)
-	{	
+	{
 		$credentials = array('email' => $user->email);
 		Password::remind($credentials);
 		return Redirect::to('');

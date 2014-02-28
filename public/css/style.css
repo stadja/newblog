@@ -16,7 +16,7 @@ a {
 	color: #00BB88;
 }
 a:hover {
-	color: #008055;
+	color: #00BB88;
 }
 
 .show-grid [class*="span"] {
@@ -81,6 +81,25 @@ object {
 	#loginSubmit {
 		position: absolute;
 	}
+	
+	div.post_ajax .barre {
+    	width: 50px;
+    	height: 7px;
+    	background: url('/img/barre.png');
+    	position: relative;
+		left: -28px;
+		top: 0px;
+	}
+
+	.post_date {
+	   	border: 1px dashed #D6D6D6;
+	    max-width: 199px;
+	    padding: 2px;
+	    position: relative;
+	    right: -2px;
+	    top: 3px;
+	    overflow: hidden;
+	}
 
 	.top-cross{
 		display: block;
@@ -114,6 +133,7 @@ object {
 .bottom-fleche{
         left: 0px;
 }
+
 }
 
 @media (min-width: 1200px) {
@@ -124,4 +144,8 @@ object {
 .bottom-fleche{
         left: 9px;
 }
+.post_date {
+    right: -19px;
 }
+}
+

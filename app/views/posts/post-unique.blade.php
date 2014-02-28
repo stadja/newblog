@@ -2,28 +2,29 @@
 use dflydev\markdown\MarkdownExtraParser;
 $markdownParser = new MarkdownExtraParser();
 ?>
-    <div class='post' style='display: {{ isset($display) ? $display : 'block'}};'>
+    <div itemprop="blogPosts" itemscope itemtype="http://schema.org/BlogPosting" class='post' style='display: {{ isset($display) ? $display : 'block'}};'>
         <div class="row">
             <div class="span9 offset1">
                 <div class="row">
                     <div class="span9 left-bordered text-post float-right" style="float: right;">
+                        <div class="barre"></div>
                         <div class="row-fluid">
-                            <div class="span12 body_post">{{ $markdownParser->transformMarkdown($post->body) }}</div>
+                            <div class="span12 body_post" itemprop="articleBody">{{ $markdownParser->transformMarkdown($post->body) }}</div>
                              @if ($post->posted_at != $post->updated_at)
-                            <small style='float: right;'>(modifié le {{ date("d/m/Y à H:i", strtotime($post->updated_at)) }})</small>
-                            @endif<br/> 
+                            <small style='float: right;'>(modifié le <time itemprop="dateModified" dateTime="{{ date("c", strtotime($post->updated_at)) }}">{{ date("d/m/Y à H:i", strtotime($post->updated_at)) }}</time>)</small>
+                            @endif<br/>
                         </div>
                     </div>
 
                     <div class="span3 float-right" style="margin: 0;">
-                        <p>
+                        <p class='post_date'>
                             <strong>
-                                <a id="post-{{ $post->id }}" href="{{ URL::route('posts.show', $post->id) }}">
-                                    {{ $post->title }}
+                                <a itemprop="url" id="post-{{ $post->id }}" href="{{ URL::route('posts.show', $post->id) }}">
+                                    <span itemprop="name">{{ $post->title }}</span>
                                 </a>
                             </strong><br/>
-                            Le {{ date("d/m/Y à H:i", strtotime($post->posted_at)) }}
-                            par <b>{{ $post->user->pseudo }}</b>
+                            Le <time itemprop="datePublished" dateTime="{{ date("c", strtotime($post->posted_at)) }}">{{ date("d/m/Y à H:i", strtotime($post->posted_at)) }}</time>
+                            <br/>par <b><span itemprop="author" itemscope="http://schema.org/Person"><span itemprop="name">{{ $post->user->pseudo }}</span></span></b>
                         </p>
                     </div>
                 </div>

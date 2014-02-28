@@ -36,8 +36,16 @@ $res = App::instance('resources', $res);*/
 	{{ Form::close() }}
 </div>
 <div class='span2'>
-	@if(isset($post) && isset($post->id))
-		<a href='{{ URL::route('posts.show', $post->id) }}'>Prévisualisation</a>
-	@endif
+	<div class="row-fluid">
+		<textarea id='unvisible-textarea'></textarea>
+	</div>
+	<div class="row-fluid">
+		<div id='visible-textarea' class="visible-textarea"></div>
+	</div>
+	<div class="row-fluid">
+		@if(isset($post) && isset($post->id))
+			<a href='{{ URL::route('posts.show', $post->id) }}'>Prévisualisation</a>
+		@endif
+	</div>
 </div>
 @stop

@@ -2,28 +2,29 @@
 use dflydev\markdown\MarkdownExtraParser;
 $markdownParser = new MarkdownExtraParser();
 ?>
-    <div class='post' style='display: <?php echo isset($display) ? $display : 'block'; ?>;'>
+    <div itemprop="blogPosts" itemscope itemtype="http://schema.org/BlogPosting" class='post' style='display: <?php echo isset($display) ? $display : 'block'; ?>;'>
         <div class="row">
             <div class="span9 offset1">
                 <div class="row">
                     <div class="span9 left-bordered text-post float-right" style="float: right;">
+                        <div class="barre"></div>
                         <div class="row-fluid">
-                            <div class="span12 body_post"><?php echo $markdownParser->transformMarkdown($post->body); ?></div>
+                            <div class="span12 body_post" itemprop="articleBody"><?php echo $markdownParser->transformMarkdown($post->body); ?></div>
                              <?php if ($post->posted_at != $post->updated_at): ?>
-                            <small style='float: right;'>(modifié le <?php echo date("d/m/Y à H:i", strtotime($post->updated_at)); ?>)</small>
-                            <?php endif; ?><br/> 
+                            <small style='float: right;'>(modifié le <time itemprop="dateModified" dateTime="<?php echo date("c", strtotime($post->updated_at)); ?>"><?php echo date("d/m/Y à H:i", strtotime($post->updated_at)); ?></time>)</small>
+                            <?php endif; ?><br/>
                         </div>
                     </div>
 
                     <div class="span3 float-right" style="margin: 0;">
-                        <p>
+                        <p class='post_date'>
                             <strong>
-                                <a id="post-<?php echo $post->id; ?>" href="<?php echo URL::route('posts.show', $post->id); ?>">
-                                    <?php echo $post->title; ?>
+                                <a itemprop="url" id="post-<?php echo $post->id; ?>" href="<?php echo URL::route('posts.show', $post->id); ?>">
+                                    <span itemprop="name"><?php echo $post->title; ?></span>
                                 </a>
                             </strong><br/>
-                            Le <?php echo date("d/m/Y à H:i", strtotime($post->posted_at)); ?>
-                            par <b><?php echo $post->user->pseudo; ?></b>
+                            Le <time itemprop="datePublished" dateTime="<?php echo date("c", strtotime($post->posted_at)); ?>"><?php echo date("d/m/Y à H:i", strtotime($post->posted_at)); ?></time>
+                            <br/>par <b><span itemprop="author" itemscope="http://schema.org/Person"><span itemprop="name"><?php echo $post->user->pseudo; ?></span></span></b>
                         </p>
                     </div>
                 </div>

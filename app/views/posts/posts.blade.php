@@ -1,5 +1,11 @@
 @extends('layout')
 
+@if (isset($title) && ($title != ''))
+    @section('title')
+            {{$title}}
+    @stop
+@endif
+
 @section('content')
 
 <div class="row hidden-phone">

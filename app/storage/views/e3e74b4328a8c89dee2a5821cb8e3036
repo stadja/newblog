@@ -1,4 +1,10 @@
 
+<?php if (isset($title) && ($title != '')): ?>
+    <?php $__env->startSection('title'); ?>
+            <?php echo $title; ?>
+    <?php $__env->stopSection(); ?>
+<?php endif; ?>
+
 <?php $__env->startSection('content'); ?>
 
 <div class="row hidden-phone">
