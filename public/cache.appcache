@@ -1,0 +1,12 @@
+CACHE MANIFEST
+# Use from network if available
+NETWORK:
+cache.manifest
+*
+/
+http://blog.stadja.net
+
+# Fallback content
+FALLBACK:
+* last
+#1393581911
