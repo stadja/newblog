@@ -74,6 +74,18 @@ class LinkTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals($expected, $link->getUri());
     }
 
+    /**
+     * @dataProvider getGetUriTests
+     */
+    public function testGetUriOnArea($url, $currentUri, $expected)
+    {
+        $dom = new \DOMDocument();
+        $dom->loadHTML(sprintf('<html><map><area href="%s" /></map></html>', $url));
+        $link = new Link($dom->getElementsByTagName('area')->item(0), $currentUri);
+
+        $this->assertEquals($expected, $link->getUri());
+    }
+
     public function getGetUriTests()
     {
         return array(
@@ -122,6 +134,11 @@ class LinkTest extends \PHPUnit_Framework_TestCase
             array('../bar/./../../foo', 'http://localhost/bar/foo/', 'http://localhost/foo'),
             array('../../', 'http://localhost/', 'http://localhost/'),
             array('../../', 'http://localhost', 'http://localhost/'),
+
+            array('/foo', 'file:///', 'file:///foo'),
+            array('/foo', 'file:///bar/baz', 'file:///foo'),
+            array('foo', 'file:///', 'file:///foo'),
+            array('foo', 'file:///bar/baz', 'file:///bar/foo'),
         );
     }
 }

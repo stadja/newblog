@@ -5,6 +5,7 @@ use Closure;
 use DateTime;
 use Illuminate\Cache\CacheManager;
 use Illuminate\Database\Query\Processors\Processor;
+use Doctrine\DBAL\Connection as DoctrineConnection;
 
 class Connection implements ConnectionInterface {
 
@@ -63,6 +64,13 @@ class Connection implements ConnectionInterface {
 	 * @var int
 	 */
 	protected $fetchMode = PDO::FETCH_ASSOC;
+
+	/**
+	 * The number of active transasctions.
+	 *
+	 * @var int
+	 */
+	protected $transactions = 0;
 
 	/**
 	 * All of the queries run against the connection.
@@ -400,7 +408,7 @@ class Connection implements ConnectionInterface {
 	 */
 	public function transaction(Closure $callback)
 	{
-		$this->pdo->beginTransaction();
+		$this->beginTransaction();
 
 		// We'll simply execute the given callback within a try / catch block
 		// and if we catch any exception we can rollback the transaction
@@ -409,7 +417,7 @@ class Connection implements ConnectionInterface {
 		{
 			$result = $callback($this);
 
-			$this->pdo->commit();
+			$this->commit();
 		}
 
 		// If we catch an exception, we will roll back so nothing gets messed
@@ -417,12 +425,58 @@ class Connection implements ConnectionInterface {
 		// be handled how the developer sees fit for their applications.
 		catch (\Exception $e)
 		{
-			$this->pdo->rollBack();
+			$this->rollBack();
 
 			throw $e;
 		}
 
 		return $result;
+	}
+
+	/**
+	 * Start a new database transaction.
+	 *
+	 * @return void
+	 */
+	public function beginTransaction()
+	{
+		++$this->transactions;
+
+		if ($this->transactions == 1)
+		{
+			$this->pdo->beginTransaction();
+		}
+	}
+
+	/**
+	 * Commit the active database transaction.
+	 *
+	 * @return void
+	 */
+	public function commit()
+	{
+		if ($this->transactions == 1) $this->pdo->commit();
+
+		--$this->transactions;
+	}
+
+	/**
+	 * Rollback the active database transaction.
+	 *
+	 * @return void
+	 */
+	public function rollBack()
+	{
+		if ($this->transactions == 1)
+		{
+			$this->transactions = 0;
+
+			$this->pdo->rollBack();
+		}
+		else
+		{
+			--$this->transactions;
+		}
 	}
 
 	/**
@@ -499,7 +553,7 @@ class Connection implements ConnectionInterface {
 
 		$message = $e->getMessage()." (SQL: {$query}) (Bindings: {$bindings})";
 
-		throw new \Exception($message);
+		throw new \Exception($message, 0, $e);
 	}
 
 	/**
@@ -544,7 +598,7 @@ class Connection implements ConnectionInterface {
 	 */
 	protected function getElapsedTime($start)
 	{
-		return number_format((microtime(true) - $start) * 1000, 2);
+		return round((microtime(true) - $start) * 1000, 2);
 	}
 
 	/**
@@ -580,17 +634,30 @@ class Connection implements ConnectionInterface {
 	{
 		$driver = $this->getDoctrineDriver();
 
-		return new \Doctrine\DBAL\Connection(array('pdo' => $this->pdo), $driver);
+		$data = array('pdo' => $this->pdo, 'dbname' => $this->getConfig('database'));
+
+		return new DoctrineConnection($data, $driver);
 	}
 
 	/**
-	 * Get the currently used PDO connection.
+	 * Get the current PDO connection.
 	 *
 	 * @return PDO
 	 */
 	public function getPdo()
 	{
 		return $this->pdo;
+	}
+
+	/**
+	 * Set the PDO connection.
+	 *
+	 * @param  PDO  $pdo
+	 * @return void
+	 */
+	public function setPdo(PDO $pdo)
+	{
+		$this->pdo = $pdo;
 	}
 
 	/**
@@ -871,6 +938,8 @@ class Connection implements ConnectionInterface {
 	public function setTablePrefix($prefix)
 	{
 		$this->tablePrefix = $prefix;
+
+		$this->getQueryGrammar()->setTablePrefix($prefix);
 	}
 
 	/**

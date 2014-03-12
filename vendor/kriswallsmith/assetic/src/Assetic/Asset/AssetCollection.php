@@ -3,7 +3,7 @@
 /*
  * This file is part of the Assetic package, an OpenSky project.
  *
- * (c) 2010-2013 OpenSky Project Inc
+ * (c) 2010-2014 OpenSky Project Inc
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -128,6 +128,7 @@ class AssetCollection implements \IteratorAggregate, AssetCollectionInterface
     public function clearFilters()
     {
         $this->filters->clear();
+        $this->clones = new \SplObjectStorage();
     }
 
     public function load(FilterInterface $additionalFilter = null)
@@ -169,6 +170,10 @@ class AssetCollection implements \IteratorAggregate, AssetCollectionInterface
     }
 
     public function getSourcePath()
+    {
+    }
+
+    public function getSourceDirectory()
     {
     }
 

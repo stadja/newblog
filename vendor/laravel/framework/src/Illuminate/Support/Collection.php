@@ -4,6 +4,7 @@ use Closure;
 use Countable;
 use ArrayAccess;
 use ArrayIterator;
+use CachingIterator;
 use IteratorAggregate;
 use Illuminate\Support\Contracts\JsonableInterface;
 use Illuminate\Support\Contracts\ArrayableInterface;
@@ -36,9 +37,11 @@ class Collection implements ArrayAccess, ArrayableInterface, Countable, Iterator
 	 */
 	public static function make($items)
 	{
+		if (is_null($items)) return new static;
+
 		if ($items instanceof Collection) return $items;
 
-		return new static($items);
+		return new static(is_array($items) ? $items : array($items));
 	}
 
 	/**
@@ -154,6 +157,18 @@ class Collection implements ArrayAccess, ArrayableInterface, Countable, Iterator
 	}
 
 	/**
+	 * Reduce the collection to a single value.
+	 *
+	 * @param  callable  $callback
+	 * @param  mixed  $initial
+	 * @return mixed
+	 */
+	public function reduce($callback, $initial = null)
+	{
+		return array_reduce($this->items, $callback, $initial);
+	}
+
+	/**
 	 * Execute a callback over each item.
 	 *
 	 * @param  Closure  $callback
@@ -174,7 +189,7 @@ class Collection implements ArrayAccess, ArrayableInterface, Countable, Iterator
 	 */
 	public function map(Closure $callback)
 	{
-		return new static(array_map($callback, $this->items));
+		return new static(array_map($callback, $this->items, array_keys($this->items)));
 	}
 
 	/**
@@ -205,9 +220,10 @@ class Collection implements ArrayAccess, ArrayableInterface, Countable, Iterator
 	 * Sort the collection using the given Closure.
 	 *
 	 * @param  \Closure  $callback
+	 * @param  int  $options
 	 * @return \Illuminate\Support\Collection
 	 */
-	public function sortBy(Closure $callback)
+	public function sortBy(Closure $callback, $options = SORT_REGULAR)
 	{
 		$results = array();
 
@@ -219,7 +235,7 @@ class Collection implements ArrayAccess, ArrayableInterface, Countable, Iterator
 			$results[$key] = $callback($value);
 		}
 
-		asort($results);
+		asort($results, $options);
 
 		// Once we have sorted all of the keys in the array, we will loop through them
 		// and grab the corresponding model so we can set the underlying items list
@@ -297,7 +313,7 @@ class Collection implements ArrayAccess, ArrayableInterface, Countable, Iterator
 	/**
 	 * Merge items with the collection items.
 	 *
-	 * @param  \Illuminate\Support\Collection|\Illuminate\Support\Contracts\ArrayableInterface|array
+	 * @param  \Illuminate\Support\Collection|\Illuminate\Support\Contracts\ArrayableInterface|array  $items
 	 * @return \Illuminate\Support\Collection
 	 */
 	public function merge($items)
@@ -327,6 +343,45 @@ class Collection implements ArrayAccess, ArrayableInterface, Countable, Iterator
 	public function slice($offset, $length = null, $preserveKeys = false)
 	{
 		return new static(array_slice($this->items, $offset, $length, $preserveKeys));
+	}
+
+	/**
+	 * Take the first or last {$limit} items.
+	 *
+	 * @param  int  $limit
+	 * @return \Illuminate\Support\Collection
+	 */
+	public function take($limit = null)
+	{
+		if ($limit < 0) return $this->slice($limit, abs($limit));
+
+		return $this->slice(0, $limit);
+	}
+
+	/**
+	 * Get an array with the values of a given key.
+	 *
+	 * @param  string  $value
+	 * @param  string  $key
+	 * @return array
+	 */
+	public function lists($value, $key = null)
+	{
+		return array_pluck($this->items, $value, $key);
+	}
+
+	/**
+	 * Concatenate values of a given key as a string.
+	 *
+	 * @param  string  $value
+	 * @param  string  $glue
+	 * @return string
+	 */
+	public function implode($value, $glue = null)
+	{
+		if (is_null($glue)) return implode($this->lists($value));
+
+		return implode($glue, $this->lists($value));
 	}
 
 	/**
@@ -372,6 +427,16 @@ class Collection implements ArrayAccess, ArrayableInterface, Countable, Iterator
 	public function getIterator()
 	{
 		return new ArrayIterator($this->items);
+	}
+
+	/**
+	 * Get a CachingIterator instance.
+	 *
+	 * @return \CachingIterator
+	 */
+	public function getCachingIterator($flags = CachingIterator::CALL_TOSTRING)
+	{
+		return new CachingIterator($this->getIterator(), $flags);
 	}
 
 	/**

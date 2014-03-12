@@ -78,7 +78,7 @@ abstract class Client
     {
         $this->followRedirects = (Boolean) $followRedirect;
     }
-    
+
     /**
      * Sets the maximum number of requests that crawler can follow.
      *
@@ -302,12 +302,18 @@ abstract class Client
         }
 
         $uri = $this->getAbsoluteUri($uri);
-
         $server = array_merge($this->server, $server);
+
         if (!$this->history->isEmpty()) {
             $server['HTTP_REFERER'] = $this->history->current()->getUri();
         }
+
         $server['HTTP_HOST'] = parse_url($uri, PHP_URL_HOST);
+
+        if ($port = parse_url($uri, PHP_URL_PORT)) {
+            $server['HTTP_HOST'] .= ':'.$port;
+        }
+
         $server['HTTPS'] = 'https' == parse_url($uri, PHP_URL_SCHEME);
 
         $this->internalRequest = new Request($uri, $method, $parameters, $files, $this->cookieJar->allValues($uri), $server, $content);
@@ -329,7 +335,7 @@ abstract class Client
         $this->cookieJar->updateFromResponse($this->internalResponse, $uri);
 
         $status = $this->internalResponse->getStatus();
-        
+
         if ($status >= 300 && $status < 400) {
             $this->redirect = $this->internalResponse->getHeader('Location');
         } else {
@@ -417,7 +423,7 @@ abstract class Client
      *
      * This method returns null if the DomCrawler component is not available.
      *
-     * @param string $uri     A uri
+     * @param string $uri     A URI
      * @param string $content Content for the crawler to use
      * @param string $type    Content type
      *
@@ -492,9 +498,31 @@ abstract class Client
             }
         }
 
+        $request = $this->internalRequest;
+
+        if (in_array($this->internalResponse->getStatus(), array(302, 303))) {
+            $method = 'get';
+            $files = array();
+            $content = null;
+        } else {
+            $method = $request->getMethod();
+            $files = $request->getFiles();
+            $content = $request->getContent();
+        }
+
+        if ('get' === strtolower($method)) {
+            // Don't forward parameters for GET request as it should reach the redirection URI
+            $parameters = array();
+        } else {
+            $parameters = $request->getParameters();
+        }
+
+        $server = $request->getServer();
+        unset($server['HTTP_IF_NONE_MATCH'], $server['HTTP_IF_MODIFIED_SINCE']);
+
         $this->isMainRequest = false;
 
-        $response = $this->request('get', $this->redirect);
+        $response = $this->request($method, $this->redirect, $parameters, $files, $server, $content);
 
         $this->isMainRequest = true;
 
@@ -517,9 +545,9 @@ abstract class Client
     /**
      * Takes a URI and converts it to absolute if it is not already absolute.
      *
-     * @param string $uri A uri
+     * @param string $uri A URI
      *
-     * @return string An absolute uri
+     * @return string An absolute URI
      */
     protected function getAbsoluteUri($uri)
     {
@@ -535,6 +563,11 @@ abstract class Client
                 isset($this->server['HTTPS']) ? 's' : '',
                 isset($this->server['HTTP_HOST']) ? $this->server['HTTP_HOST'] : 'localhost'
             );
+        }
+
+        // protocol relative URL
+        if (0 === strpos($uri, '//')) {
+            return parse_url($currentUri, PHP_URL_SCHEME).':'.$uri;
         }
 
         // anchor?

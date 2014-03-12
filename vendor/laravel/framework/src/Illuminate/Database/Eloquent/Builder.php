@@ -3,6 +3,7 @@
 use Closure;
 use DateTime;
 use Illuminate\Database\Query\Expression;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 
 class Builder {
@@ -54,21 +55,40 @@ class Builder {
 	 *
 	 * @param  mixed  $id
 	 * @param  array  $columns
-	 * @return \Illuminate\Database\Eloquent\Model
+	 * @return \Illuminate\Database\Eloquent\Model|static|null
 	 */
 	public function find($id, $columns = array('*'))
 	{
+		if (is_array($id))
+		{
+		    return $this->findMany($id, $columns);
+		}
+
 		$this->query->where($this->model->getKeyName(), '=', $id);
 
 		return $this->first($columns);
 	}
 
 	/**
+	 * Find a model by its primary key.
+	 *
+	 * @param  array  $id
+	 * @param  array  $columns
+	 * @return \Illuminate\Database\Eloquent\Model|Collection|static
+	 */
+	public function findMany($id, $columns = array('*'))
+	{
+		$this->query->whereIn($this->model->getKeyName(), $id);
+
+		return $this->get($columns);
+    }
+
+	/**
 	 * Find a model by its primary key or throw an exception.
 	 *
 	 * @param  mixed  $id
 	 * @param  array  $columns
-	 * @return \Illuminate\Database\Eloquent\Model|Collection
+	 * @return \Illuminate\Database\Eloquent\Model|static
 	 */
 	public function findOrFail($id, $columns = array('*'))
 	{
@@ -80,8 +100,8 @@ class Builder {
 	/**
 	 * Execute the query and get the first result.
 	 *
-	 * @param  array   $columns
-	 * @return array
+	 * @param  array  $columns
+	 * @return \Illuminate\Database\Eloquent\Model|static|null
 	 */
 	public function first($columns = array('*'))
 	{
@@ -91,8 +111,8 @@ class Builder {
 	/**
 	 * Execute the query and get the first result or throw an exception.
 	 *
-	 * @param  array   $columns
-	 * @return array
+	 * @param  array  $columns
+	 * @return \Illuminate\Database\Eloquent\Model|static
 	 */
 	public function firstOrFail($columns = array('*'))
 	{
@@ -105,7 +125,7 @@ class Builder {
 	 * Execute the query as a "select" statement.
 	 *
 	 * @param  array  $columns
-	 * @return \Illuminate\Database\Eloquent\Collection
+	 * @return \Illuminate\Database\Eloquent\Collection|static[]
 	 */
 	public function get($columns = array('*'))
 	{
@@ -133,6 +153,30 @@ class Builder {
 		$result = $this->first(array($column));
 
 		if ($result) return $result->{$column};
+	}
+
+	/**
+	 * Chunk the results of the query.
+	 *
+	 * @param  int  $count
+	 * @param  callable  $callback
+	 * @return void
+	 */
+	public function chunk($count, $callback)
+	{
+		$results = $this->forPage($page = 1, $count)->get();
+
+		while (count($results) > 0)
+		{
+			// On each chunk result set, we will pass them to the callback and then let the
+			// developer take care of everything within the callback, which allows us to
+			// keep the memory low for spinning through large result sets for working.
+			call_user_func($callback, $results);
+
+			$page++;
+
+			$results = $this->forPage($page, $count)->get();
+		}
 	}
 
 	/**
@@ -215,7 +259,7 @@ class Builder {
 		// Once we have the paginator we need to set the limit and offset values for
 		// the query so we can get the properly paginated items. Once we have an
 		// array of items we can create the paginator instances for the items.
-		$page = $paginator->getCurrentPage();
+		$page = $paginator->getCurrentPage($total);
 
 		$this->query->forPage($page, $perPage);
 
@@ -275,7 +319,7 @@ class Builder {
 
 		$column = $this->model->getUpdatedAtColumn();
 
-		return array_add($values, $column, new DateTime);
+		return array_add($values, $column, $this->model->freshTimestampString());
 	}
 
 	/**
@@ -287,14 +331,24 @@ class Builder {
 	{
 		if ($this->model->isSoftDeleting())
 		{
-			$column = $this->model->getDeletedAtColumn();
-
-			return $this->query->update(array($column => new DateTime));
+			return $this->softDelete();
 		}
 		else
 		{
 			return $this->query->delete();
 		}
+	}
+
+	/**
+	 * Soft delete the record in the database.
+	 *
+	 * @return int
+	 */
+	protected function softDelete()
+	{
+		$column = $this->model->getDeletedAtColumn();
+
+		return $this->update(array($column => $this->model->freshTimestampString()));
 	}
 
 	/**
@@ -318,20 +372,20 @@ class Builder {
 		{
 			$column = $this->model->getDeletedAtColumn();
 
-			return $this->query->update(array($column => null));
+			return $this->update(array($column => null));
 		}
 	}
 
 	/**
 	 * Include the soft deleted models in the results.
 	 *
-	 * @return \Illuminate\Database\Eloquent\Builder
+	 * @return \Illuminate\Database\Eloquent\Builder|static
 	 */
 	public function withTrashed()
 	{
 		$column = $this->model->getQualifiedDeletedAtColumn();
 
-		foreach ($this->query->wheres as $key => $where)
+		foreach ((array) $this->query->wheres as $key => $where)
 		{
 			// If the where clause is a soft delete date constraint, we will remove it from
 			// the query and reset the keys on the wheres. This allows this developer to
@@ -350,7 +404,7 @@ class Builder {
 	/**
 	 * Force the result set to only included soft deletes.
 	 *
-	 * @return \Illuminate\Database\Eloquent\Builder
+	 * @return \Illuminate\Database\Eloquent\Builder|static
 	 */
 	public function onlyTrashed()
 	{
@@ -377,7 +431,7 @@ class Builder {
 	 * Get the hydrated models without eager loading.
 	 *
 	 * @param  array  $columns
-	 * @return array
+	 * @return array|static[]
 	 */
 	public function getModels($columns = array('*'))
 	{
@@ -428,9 +482,9 @@ class Builder {
 	/**
 	 * Eagerly load the relationship on a set of models.
 	 *
-	 * @param  string   $relation
-	 * @param  array    $models
-	 * @param  Closure  $constraints
+	 * @param  array     $models
+	 * @param  string    $name
+	 * @param  \Closure  $constraints
 	 * @return array
 	 */
 	protected function loadRelation(array $models, $name, Closure $constraints)
@@ -440,14 +494,7 @@ class Builder {
 		// query back to it in order that any where conditions might be specified.
 		$relation = $this->getRelation($name);
 
-		list($wheres, $bindings) = $relation->getAndResetWheres();
-
 		$relation->addEagerConstraints($models);
-
-		// We allow the developers to specify constraints on eager loads and we'll just
-		// call the constraints Closure, passing along the query so they will simply
-		// do all they need to the queries, and even may specify non-where things.
-		$relation->mergeWheres($wheres, $bindings);
 
 		call_user_func($constraints, $relation);
 
@@ -469,13 +516,21 @@ class Builder {
 	 */
 	public function getRelation($relation)
 	{
-		$query = $this->getModel()->$relation();
+		$me = $this;
+
+		// We want to run a relationship query without any constrains so that we will
+		// not have to remove these where clauses manually which gets really hacky
+		// and is error prone while we remove the developer's own where clauses.
+		$query = Relation::noConstraints(function() use ($me, $relation)
+		{
+			return $me->getModel()->$relation();
+		});
+
+		$nested = $this->nestedRelations($relation);
 
 		// If there are nested relationships set on the query, we will put those onto
 		// the query instances so that they can be handled after this relationship
 		// is loaded. In this way they will all trickle down as they are loaded.
-		$nested = $this->nestedRelations($relation);
-
 		if (count($nested) > 0)
 		{
 			$query->getQuery()->with($nested);
@@ -529,7 +584,7 @@ class Builder {
 	 * @param  string  $operator
 	 * @param  int     $count
 	 * @param  string  $boolean
-	 * @return \Illuminate\Database\Eloquent\Builder
+	 * @return \Illuminate\Database\Eloquent\Builder|static
 	 */
 	public function has($relation, $operator = '>=', $count = 1, $boolean = 'and')
 	{
@@ -548,7 +603,7 @@ class Builder {
 	 * @param  string  $relation
 	 * @param  string  $operator
 	 * @param  int     $count
-	 * @return \Illuminate\Database\Eloquent\Builder
+	 * @return \Illuminate\Database\Eloquent\Builder|static
 	 */
 	public function orHas($relation, $operator = '>=', $count = 1)
 	{
@@ -558,8 +613,8 @@ class Builder {
 	/**
 	 * Set the relationships that should be eager loaded.
 	 *
-	 * @param  dynamic  $relation
-	 * @return \Illuminate\Database\Eloquent\Builder
+	 * @param  dynamic  $relations
+	 * @return \Illuminate\Database\Eloquent\Builder|static
 	 */
 	public function with($relations)
 	{
@@ -633,9 +688,23 @@ class Builder {
 	}
 
 	/**
+	 * Call the given model scope on the underlying model.
+	 *
+	 * @param  string  $scope
+	 * @param  array  $parameters
+	 * @return \Illuminate\Database\Query\Builder
+	 */
+	protected function callScope($scope, $parameters)
+	{
+		array_unshift($parameters, $this);
+
+		return call_user_func_array(array($this->model, $scope), $parameters) ?: $this;
+	}
+
+	/**
 	 * Get the underlying query builder instance.
 	 *
-	 * @return \Illuminate\Database\Query\Builder
+	 * @return \Illuminate\Database\Query\Builder|static
 	 */
 	public function getQuery()
 	{
@@ -710,9 +779,7 @@ class Builder {
 	{
 		if (method_exists($this->model, $scope = 'scope'.ucfirst($method)))
 		{
-			array_unshift($parameters, $this);
-
-			call_user_func_array(array($this->model, $scope), $parameters);
+			return $this->callScope($scope, $parameters);
 		}
 		else
 		{
@@ -720,6 +787,16 @@ class Builder {
 		}
 
 		return in_array($method, $this->passthru) ? $result : $this;
+	}
+
+	/**
+	 * Force a clone of the underlying query builder when cloning.
+	 *
+	 * @return void
+	 */
+	public function __clone()
+	{
+		$this->query = clone $this->query;
 	}
 
 }

@@ -130,7 +130,7 @@ class Handler {
 		{
 			$e = new ErrorException($message, $level, 0, $file, $line);
 
-			$this->handleException($e);
+			throw $e;
 		}
 	}
 
@@ -313,9 +313,14 @@ class Handler {
 	 */
 	protected function formatException(\Exception $e)
 	{
-		$location = $e->getMessage().' in '.$e->getFile().':'.$e->getLine();
+		if ($this->debug)
+		{
+			$location = $e->getMessage().' in '.$e->getFile().':'.$e->getLine();
 
-		return 'Error in exception handler: '.$location;
+			return 'Error in exception handler: '.$location;
+		}
+
+		return 'Error in exception handler.';
 	}
 
 	/**
@@ -327,6 +332,17 @@ class Handler {
 	public function error(Closure $callback)
 	{
 		array_unshift($this->handlers, $callback);
+	}
+
+	/**
+	 * Register an application error handler at the bottom of the stack.
+	 *
+	 * @param  Closure  $callback
+	 * @return void
+	 */
+	public function pushError(Closure $callback)
+	{
+		$this->handlers[] = $callback;
 	}
 
 	/**

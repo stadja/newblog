@@ -1,5 +1,6 @@
 <?php namespace Illuminate\Foundation\Console;
 
+use Illuminate\Routing\Router;
 use Illuminate\Console\Command;
 use Symfony\Component\Routing\Route;
 use Symfony\Component\Routing\RouteCollection;
@@ -23,9 +24,16 @@ class RoutesCommand extends Command {
 	protected $description = 'List all registered routes';
 
 	/**
-	 * An array o fall registered routes.
+	 * The router instance.
 	 *
-	 * @var array
+	 * @var \Illuminate\Routing\Router
+	 */
+	protected $router;
+
+	/**
+	 * An array of all the registered routes.
+	 *
+	 * @var \Symfony\Component\Routing\RouteCollection
 	 */
 	protected $routes;
 
@@ -39,14 +47,15 @@ class RoutesCommand extends Command {
 	/**
 	 * Create a new route command instance.
 	 *
-	 * @param  \Symfony\Component\Routing\RouteCollection  $routes
+	 * @param  \Illuminate\Routing\Router  $router
 	 * @return void
 	 */
-	public function __construct(RouteCollection $routes)
+	public function __construct(Router $router)
 	{
 		parent::__construct();
 
-		$this->routes = $routes;
+		$this->router = $router;
+		$this->routes = $router->getRoutes();
 	}
 
 	/**
@@ -80,7 +89,7 @@ class RoutesCommand extends Command {
 			$results[] = $this->getRouteInformation($name, $route);
 		}
 
-		return $results;
+		return array_filter($results);
 	}
 
 	/**
@@ -96,13 +105,14 @@ class RoutesCommand extends Command {
 
 		$action = $route->getAction() ?: 'Closure';
 
-		return array(
+		return $this->filterRoute(array(
 			'host'   => $route->getHost(),
 			'uri'    => $uri,
 			'name'   => $this->getRouteName($name),
 			'action' => $action,
 			'before' => $this->getBeforeFilters($route),
-			'after'  => $this->getAfterFilters($route));
+			'after'  => $this->getAfterFilters($route)
+		));
 	}
 
 	/**
@@ -134,12 +144,36 @@ class RoutesCommand extends Command {
 	/**
 	 * Get before filters
 	 *
-	 * @param  Route  $route
+	 * @param  \Illuminate\Routing\Route  $route
 	 * @return string
 	 */
 	protected function getBeforeFilters($route)
 	{
-		return implode(', ',$route->getBeforeFilters());
+		$before = $route->getBeforeFilters();
+
+		$before = array_unique(array_merge($before, $this->getPatternFilters($route)));
+
+		return implode(', ', $before);
+	}
+
+	/**
+	 * Get all of the pattern filters matching the route.
+	 *
+	 * @param  \Illuminate\Routing\Route  $route
+	 * @return array
+	 */
+	protected function getPatternFilters($route)
+	{
+		$patterns = array();
+
+		foreach ($route->getMethods() as $method)
+		{
+			$inner = $this->router->findPatternFilters($method, $route->getPath());
+
+			$patterns = array_merge($patterns, $inner);
+		}
+
+		return $patterns;
 	}
 
 	/**
@@ -151,6 +185,39 @@ class RoutesCommand extends Command {
 	protected function getAfterFilters($route)
 	{
 		return implode(', ',$route->getAfterFilters());
+	}
+
+	/**
+	 * Filter the route by URI and / or name.
+	 *
+	 * @param  array  $route
+	 * @return array|null
+	 */
+	protected function filterRoute(array $route)
+	{
+		if (($this->option('name') and ! str_contains($route['name'], $this->option('name'))) or
+			 $this->option('path') and ! str_contains($route['uri'], $this->option('path')))
+		{
+			return null;
+		}
+		else
+		{
+			return $route;
+		}
+	}
+
+	/**
+	 * Get the console command options.
+	 *
+	 * @return array
+	 */
+	protected function getOptions()
+	{
+		return array(
+			array('name', null, InputOption::VALUE_OPTIONAL, 'Filter the routes by name.'),
+
+			array('path', null, InputOption::VALUE_OPTIONAL, 'Filter the routes by path.'),
+		);
 	}
 
 }

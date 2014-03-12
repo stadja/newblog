@@ -94,6 +94,28 @@ class ProxyMagicMethodsTest extends PHPUnit_Framework_TestCase
         $this->assertSame(3, $counter);
     }
 
+    /**
+     * @group DCOM-194
+     */
+    public function testInheritedMagicGetByRef()
+    {
+        $proxyClassName    = $this->generateProxyClass(__NAMESPACE__ . '\\MagicGetByRefClass');
+        /* @var $proxy \Doctrine\Tests\Common\Proxy\MagicGetByRefClass */
+        $proxy             = new $proxyClassName();
+        $proxy->valueField = 123;
+        $value             = & $proxy->__get('value');
+
+        $this->assertSame(123, $value);
+
+        $value = 456;
+
+        $this->assertSame(456, $proxy->__get('value'), 'Value was fetched by reference');
+
+        $this->setExpectedException('InvalidArgumentException');
+
+        $undefined = $proxy->nonExisting;
+    }
+
     public function testInheritedMagicSet()
     {
         $proxyClassName = $this->generateProxyClass(__NAMESPACE__ . '\\MagicSetClass');
@@ -209,6 +231,26 @@ class ProxyMagicMethodsTest extends PHPUnit_Framework_TestCase
     }
 
     /**
+     * @group DCOM-175
+     */
+    public function testClonesPrivateProperties()
+    {
+        $proxyClassName = $this->generateProxyClass(__NAMESPACE__ . '\\SerializedClass');
+        /* @var $proxy SerializedClass */
+        $proxy          = new $proxyClassName();
+
+        $proxy->setFoo(1);
+        $proxy->setBar(2);
+        $proxy->setBaz(3);
+
+        $unserialized = unserialize(serialize($proxy));
+
+        $this->assertSame(1, $unserialized->getFoo());
+        $this->assertSame(2, $unserialized->getBar());
+        $this->assertSame(3, $unserialized->getBaz());
+    }
+
+    /**
      * @param $className
      *
      * @return string
@@ -277,7 +319,7 @@ class ProxyMagicMethodsTest extends PHPUnit_Framework_TestCase
             ->method('getTypeOfField')
             ->will($this->returnValue('string'));
 
-        $this->proxyGenerator->generateProxyClass($metadata);
+        $this->proxyGenerator->generateProxyClass($metadata, $this->proxyGenerator->getProxyFileName($className));
         require_once $this->proxyGenerator->getProxyFileName($className);
 
         return $proxyClassName;

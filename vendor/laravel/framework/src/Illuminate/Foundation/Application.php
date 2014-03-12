@@ -18,8 +18,8 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\HttpKernelInterface;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Symfony\Component\HttpKernel\Exception\HttpException;
+use Symfony\Component\Debug\Exception\FatalErrorException;
 use Illuminate\Support\Contracts\ResponsePreparerInterface;
-use Symfony\Component\HttpKernel\Exception\FatalErrorException;
 use Symfony\Component\HttpFoundation\Request as SymfonyRequest;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -32,7 +32,7 @@ class Application extends Container implements HttpKernelInterface, ResponsePrep
 	 *
 	 * @var string
 	 */
-	const VERSION = '4.0.2';
+	const VERSION = '4.0.10';
 
 	/**
 	 * Indicates if the application has "booted".
@@ -84,6 +84,13 @@ class Application extends Container implements HttpKernelInterface, ResponsePrep
 	protected $deferredServices = array();
 
 	/**
+	 * The request class used by the application.
+	 *
+	 * @var string
+	 */
+	protected static $requestClass = 'Illuminate\Http\Request';
+
+	/**
 	 * Create a new Illuminate application instance.
 	 *
 	 * @param  \Illuminate\Http\Request  $request
@@ -93,13 +100,49 @@ class Application extends Container implements HttpKernelInterface, ResponsePrep
 	{
 		$this['request'] = $this->createRequest($request);
 
-		// The exception handler class takes care of determining which of the bound
-		// exception handler Closures should be called for a given exception and
-		// gets the response from them. We'll bind it here to allow overrides.
+		$this->registerBaseServiceProviders();
+	}
+
+	/**
+	 * Register all of the base service providers.
+	 *
+	 * @return void
+	 */
+	protected function registerBaseServiceProviders()
+	{
+		foreach (array('Exception', 'Routing', 'Event') as $name)
+		{
+			$this->{"register{$name}Provider"}();
+		}
+	}
+
+	/**
+	 * Register the exception service provider.
+	 *
+	 * @return void
+	 */
+	protected function registerExceptionProvider()
+	{
 		$this->register(new ExceptionServiceProvider($this));
+	}
 
+	/**
+	 * Register the routing service provider.
+	 *
+	 * @return void
+	 */
+	protected function registerRoutingProvider()
+	{
 		$this->register(new RoutingServiceProvider($this));
+	}
 
+	/**
+	 * Register the event service provider.
+	 *
+	 * @return void
+	 */
+	protected function registerEventProvider()
+	{
 		$this->register(new EventServiceProvider($this));
 	}
 
@@ -111,7 +154,7 @@ class Application extends Container implements HttpKernelInterface, ResponsePrep
 	 */
 	protected function createRequest(Request $request = null)
 	{
-		return $request ?: Request::createFromGlobals();
+		return $request ?: static::onRequest('createFromGlobals');
 	}
 
 	/**
@@ -123,7 +166,9 @@ class Application extends Container implements HttpKernelInterface, ResponsePrep
 	{
 		$url = $this['config']->get('app.url', 'http://localhost');
 
-		$this->instance('request', Request::create($url, 'GET', array(), array(), array(), $_SERVER));
+		$parameters = array($url, 'GET', array(), array(), array(), $_SERVER);
+
+		$this->instance('request', static::onRequest('create', $parameters));
 	}
 
 	/**
@@ -144,7 +189,7 @@ class Application extends Container implements HttpKernelInterface, ResponsePrep
 		{
 			with(new SymfonyRedirect($this['request']->fullUrl(), 301))->send();
 
-			exit;			
+			exit;
 		}
 	}
 
@@ -187,13 +232,21 @@ class Application extends Container implements HttpKernelInterface, ResponsePrep
 	}
 
 	/**
-	 * Get the current application environment.
+	 * Get or check the current application environment.
 	 *
+	 * @param  dynamic
 	 * @return string
 	 */
 	public function environment()
 	{
-		return $this['env'];
+		if (count(func_get_args()) > 0)
+		{
+			return in_array($this['env'], func_get_args());
+		}
+		else
+		{
+			return $this['env'];
+		}
 	}
 
 	/**
@@ -296,7 +349,7 @@ class Application extends Container implements HttpKernelInterface, ResponsePrep
 	{
 		return php_sapi_name() == 'cli';
 	}
-	
+
 	/**
 	 * Determine if we are running unit tests.
 	 *
@@ -312,7 +365,7 @@ class Application extends Container implements HttpKernelInterface, ResponsePrep
 	 *
 	 * @param  \Illuminate\Support\ServiceProvider|string  $provider
 	 * @param  array  $options
-	 * @return void
+	 * @return \Illuminate\Support\ServiceProvider
 	 */
 	public function register($provider, $options = array())
 	{
@@ -337,6 +390,8 @@ class Application extends Container implements HttpKernelInterface, ResponsePrep
 		$this->serviceProviders[] = $provider;
 
 		$this->loadedProviders[get_class($provider)] = true;
+
+		return $provider;
 	}
 
 	/**
@@ -515,12 +570,10 @@ class Application extends Container implements HttpKernelInterface, ResponsePrep
 		{
 			$response = $this['events']->until('illuminate.app.down');
 
-			return $this->prepareResponse($response, $request);
+			if ( ! is_null($response)) return $this->prepareResponse($response, $request);
 		}
-		else
-		{
-			return $this['router']->dispatch($this->prepareRequest($request));
-		}
+
+		return $this['router']->dispatch($this->prepareRequest($request));
 	}
 
 	/**
@@ -614,9 +667,9 @@ class Application extends Container implements HttpKernelInterface, ResponsePrep
 	 */
 	public function prepareRequest(Request $request)
 	{
-		if (isset($this['session']))
+		if (isset($this['session.store']))
 		{
-			$request->setSessionStore($this['session']);
+			$request->setSessionStore($this['session.store']);
 		}
 
 		return $request;
@@ -693,12 +746,23 @@ class Application extends Container implements HttpKernelInterface, ResponsePrep
 	/**
 	 * Register an application error handler.
 	 *
-	 * @param  Closure  $callback
+	 * @param  \Closure  $callback
 	 * @return void
 	 */
 	public function error(Closure $callback)
 	{
 		$this['exception']->error($callback);
+	}
+
+	/**
+	 * Register an error handler at the bottom of the stack.
+	 *
+	 * @param  \Closure  $callback
+	 * @return void
+	 */
+	public function pushError(Closure $callback)
+	{
+		$this['exception']->pushError($callback);
 	}
 
 	/**
@@ -738,6 +802,16 @@ class Application extends Container implements HttpKernelInterface, ResponsePrep
 	}
 
 	/**
+	 * Get the current application locale.
+	 *
+	 * @return string
+	 */
+	public function getLocale()
+	{
+		return $this['config']->get('app.locale');
+	}
+
+	/**
 	 * Set the current application locale.
 	 *
 	 * @param  string  $locale
@@ -771,6 +845,31 @@ class Application extends Container implements HttpKernelInterface, ResponsePrep
 	public function setDeferredServices(array $services)
 	{
 		$this->deferredServices = $services;
+	}
+
+	/**
+	 * Get or set the request class for the application.
+	 *
+	 * @param  string  $class
+	 * @return string
+	 */
+	public static function requestClass($class = null)
+	{
+		if ( ! is_null($class)) static::$requestClass = $class;
+
+		return static::$requestClass;
+	}
+
+	/**
+	 * Call a method on the default request class.
+	 *
+	 * @param  string  $method
+	 * @param  array  $parameters
+	 * @return mixed
+	 */
+	public static function onRequest($method, $parameters = array())
+	{
+		return forward_static_call_array(array(static::requestClass(), $method), $parameters);
 	}
 
 	/**

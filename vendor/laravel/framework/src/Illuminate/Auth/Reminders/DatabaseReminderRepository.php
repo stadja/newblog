@@ -1,6 +1,6 @@
 <?php namespace Illuminate\Auth\Reminders;
 
-use DateTime;
+use Carbon\Carbon;
 use Illuminate\Database\Connection;
 
 class DatabaseReminderRepository implements ReminderRepositoryInterface {
@@ -27,15 +27,26 @@ class DatabaseReminderRepository implements ReminderRepositoryInterface {
 	protected $hashKey;
 
 	/**
+	 * The number of seconds a reminder should last.
+	 *
+	 * @var int
+	 */
+	protected $expires;
+
+	/**
 	 * Create a new reminder repository instance.
 	 *
-	 * @var \Illuminate\Database\Connection  $connection
+	 * @param  \Illuminate\Database\Connection  $connection
+	 * @param  string  $table
+	 * @param  string  $hashKey
+	 * @param  int  $expires
 	 * @return void
 	 */
-	public function __construct(Connection $connection, $table, $hashKey)
+	public function __construct(Connection $connection, $table, $hashKey, $expires = 60)
 	{
 		$this->table = $table;
 		$this->hashKey = $hashKey;
+		$this->expires = $expires * 60;
 		$this->connection = $connection;
 	}
 
@@ -68,7 +79,7 @@ class DatabaseReminderRepository implements ReminderRepositoryInterface {
 	 */
 	protected function getPayload($email, $token)
 	{
-		return array('email' => $email, 'token' => $token, 'created_at' => new DateTime);
+		return array('email' => $email, 'token' => $token, 'created_at' => new Carbon);
 	}
 
 	/**
@@ -90,12 +101,12 @@ class DatabaseReminderRepository implements ReminderRepositoryInterface {
 	/**
 	 * Determine if the reminder has expired.
 	 *
-	 * @param  StdClass  $reminder
+	 * @param  object  $reminder
 	 * @return bool
 	 */
 	protected function reminderExpired($reminder)
 	{
-		$createdPlusHour = strtotime($reminder->created_at) + 3600;
+		$createdPlusHour = strtotime($reminder->created_at) + $this->expires;
 
 		return $createdPlusHour < $this->getCurrentTime();
 	}
@@ -119,6 +130,18 @@ class DatabaseReminderRepository implements ReminderRepositoryInterface {
 	public function delete($token)
 	{
 		$this->getTable()->where('token', $token)->delete();
+	}
+
+	/**
+	 * Delete expired reminders.
+	 *
+	 * @return void
+	 */
+	public function deleteExpired()
+	{
+		$expired = Carbon::now()->subSeconds($this->expires);
+
+		$this->getTable()->where('created_at', '<', $expired)->delete();
 	}
 
 	/**

@@ -79,11 +79,11 @@ class RedisCache extends CacheProvider
      */
     protected function doSave($id, $data, $lifeTime = 0)
     {
-        $result = $this->redis->set($id, $data);
         if ($lifeTime > 0) {
-            $this->redis->expire($id, $lifeTime);
+            return $this->redis->setex($id, $lifeTime, $data);
         }
-        return $result;
+
+        return $this->redis->set($id, $data);
     }
 
     /**
@@ -91,7 +91,7 @@ class RedisCache extends CacheProvider
      */
     protected function doDelete($id)
     {
-        return $this->redis->delete($id);
+        return $this->redis->delete($id) > 0;
     }
 
     /**

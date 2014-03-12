@@ -1,5 +1,4 @@
 <?php
-
 /*
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
@@ -203,10 +202,8 @@ class SQLServerPlatform extends AbstractPlatform
                 $column['notnull'] = true;
             }
 
-            /**
-             * Build default constraints SQL statements
-             */
-            if ( ! empty($column['default']) || is_numeric($column['default'])) {
+            // Build default constraints SQL statements.
+            if (isset($column['default'])) {
                 $defaultConstraintsSql[] = 'ALTER TABLE ' . $tableName .
                     ' ADD' . $this->getDefaultConstraintDeclarationSQL($tableName, $column);
             }
@@ -262,7 +259,7 @@ class SQLServerPlatform extends AbstractPlatform
         if ($index->hasFlag('nonclustered')) {
             $flags = ' NONCLUSTERED';
         }
-        return 'ALTER TABLE ' . $table . ' ADD PRIMARY KEY' . $flags . ' (' . $this->getIndexFieldDeclarationListSQL($index->getColumns()) . ')';
+        return 'ALTER TABLE ' . $table . ' ADD PRIMARY KEY' . $flags . ' (' . $this->getIndexFieldDeclarationListSQL($index->getQuotedColumns($this)) . ')';
     }
 
     /**
@@ -277,7 +274,7 @@ class SQLServerPlatform extends AbstractPlatform
      */
     public function getDefaultConstraintDeclarationSQL($table, array $column)
     {
-        if (empty($column['default']) && ! is_numeric($column['default'])) {
+        if ( ! isset($column['default'])) {
             throw new \InvalidArgumentException("Incomplete column definition. 'default' required.");
         }
 
@@ -336,19 +333,16 @@ class SQLServerPlatform extends AbstractPlatform
     /**
      * Extend unique key constraint with required filters
      *
-     * @param string $sql
-     * @param Index $index
+     * @param string                      $sql
+     * @param \Doctrine\DBAL\Schema\Index $index
      *
      * @return string
      */
     private function _appendUniqueConstraintDefinition($sql, Index $index)
     {
         $fields = array();
-        foreach ($index->getColumns() as $field => $definition) {
-            if (!is_array($definition)) {
-                $field = $definition;
-            }
 
+        foreach ($index->getQuotedColumns($this) as $field) {
             $fields[] = $field . ' IS NOT NULL';
         }
 
@@ -373,7 +367,7 @@ class SQLServerPlatform extends AbstractPlatform
             $columnDef = $column->toArray();
             $queryParts[] = 'ADD ' . $this->getColumnDeclarationSQL($column->getQuotedName($this), $columnDef);
 
-            if ( ! empty($columnDef['default']) || is_numeric($columnDef['default'])) {
+            if (isset($columnDef['default'])) {
                 $columnDef['name'] = $column->getQuotedName($this);
                 $queryParts[] = 'ADD' . $this->getDefaultConstraintDeclarationSQL($diff->name, $columnDef);
             }
@@ -404,7 +398,7 @@ class SQLServerPlatform extends AbstractPlatform
              * if default value has changed and another
              * default constraint already exists for the column.
              */
-            if ($columnDefaultHasChanged && ( ! empty($fromColumnDefault) || is_numeric($fromColumnDefault))) {
+            if ($columnDefaultHasChanged && null !== $fromColumnDefault) {
                 $queryParts[] = 'DROP CONSTRAINT ' .
                     $this->generateDefaultConstraintName($diff->name, $columnDiff->oldColumnName);
             }
@@ -412,7 +406,7 @@ class SQLServerPlatform extends AbstractPlatform
             $queryParts[] = 'ALTER COLUMN ' .
                     $this->getColumnDeclarationSQL($column->getQuotedName($this), $columnDef);
 
-            if ($columnDefaultHasChanged && (! empty($columnDef['default']) || is_numeric($columnDef['default']))) {
+            if ($columnDefaultHasChanged && isset($columnDef['default'])) {
                 $columnDef['name'] = $column->getQuotedName($this);
                 $queryParts[] = 'ADD' . $this->getDefaultConstraintDeclarationSQL($diff->name, $columnDef);
             }
@@ -431,7 +425,7 @@ class SQLServerPlatform extends AbstractPlatform
              * Drop existing default constraint for the old column name
              * if column has default value.
              */
-            if ( ! empty($columnDef['default']) || is_numeric($columnDef['default'])) {
+            if (isset($columnDef['default'])) {
                 $queryParts[] = 'DROP CONSTRAINT ' .
                     $this->generateDefaultConstraintName($diff->name, $oldColumnName);
             }
@@ -442,7 +436,7 @@ class SQLServerPlatform extends AbstractPlatform
             /**
              * Readd default constraint for the new column name.
              */
-            if ( ! empty($columnDef['default']) || is_numeric($columnDef['default'])) {
+            if (isset($columnDef['default'])) {
                 $columnDef['name'] = $column->getQuotedName($this);
                 $queryParts[] = 'ADD' . $this->getDefaultConstraintDeclarationSQL($diff->name, $columnDef);
             }
@@ -676,6 +670,9 @@ class SQLServerPlatform extends AbstractPlatform
         return '(' . implode(' + ', $args) . ')';
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public function getListDatabasesSQL()
     {
         return 'SELECT * FROM SYS.DATABASES';
@@ -802,58 +799,71 @@ class SQLServerPlatform extends AbstractPlatform
      */
     protected function doModifyLimitQuery($query, $limit, $offset = null)
     {
-        if ($limit > 0) {
-            $orderby = stristr($query, 'ORDER BY');
-            //Remove ORDER BY from $query
-            $query = preg_replace('/\s+ORDER\s+BY\s+([^\)]*)/', '', $query);
-            $over = 'ORDER BY';
-
-            if ( ! $orderby) {
-                $over .= ' (SELECT 0)';
-            } else {
-                //Clear ORDER BY
-                $orderby = preg_replace('/ORDER\s+BY\s+([^\)]*)(.*)/', '$1', $orderby);
-                $orderbyParts = explode(',', $orderby);
-                $orderbyColumns = array();
-
-                //Split ORDER BY into parts
-                foreach ($orderbyParts as &$part) {
-                    $part = trim($part);
-                    if (preg_match('/(([^\s]*)\.)?([^\.\s]*)\s*(ASC|DESC)?/i', $part, $matches)) {
-                        $orderbyColumns[] = array(
-                            'table' => empty($matches[2]) ? '[^\.\s]*' : $matches[2],
-                            'column' => $matches[3],
-                            'sort' => isset($matches[4]) ? $matches[4] : null
-                        );
-                    }
-                }
-
-                //Find alias for each colum used in ORDER BY
-                if (count($orderbyColumns)) {
-                    foreach ($orderbyColumns as $column) {
-                        if (preg_match('/' . $column['table'] . '\.(' . $column['column'] . ')\s*(AS)?\s*([^,\s\)]*)/i', $query, $matches)) {
-                            $over .= ' ' . $matches[3];
-                            $over .= isset($column['sort']) ? ' ' . $column['sort'] . ',' : ',';
-                        } else {
-                            $over .= ' ' . $column['column'];
-                            $over .= isset($column['sort']) ? ' ' . $column['sort'] . ',' : ',';
-                        }
-                    }
-
-                    $over = rtrim($over, ',');
-                }
-            }
-
-            //Replace only first occurrence of FROM with $over to prevent changing FROM also in subqueries.
-            $query = preg_replace('/\sFROM\s/i', ", ROW_NUMBER() OVER ($over) AS doctrine_rownum FROM ", $query, 1);
-
-            $start = $offset + 1;
-            $end = $offset + $limit;
-
-            $query = "SELECT * FROM ($query) AS doctrine_tbl WHERE doctrine_rownum BETWEEN $start AND $end";
+        if ($limit === null) {
+            return $query;
         }
 
-        return $query;
+        $start   = $offset + 1;
+        $end     = $offset + $limit;
+        $orderBy = stristr($query, 'ORDER BY');
+        $query   = preg_replace('/\s+ORDER\s+BY\s+([^\)]*)/', '', $query); //Remove ORDER BY from $query
+        $format  = 'SELECT * FROM (%s) AS doctrine_tbl WHERE doctrine_rownum BETWEEN %d AND %d';
+
+        // Pattern to match "main" SELECT ... FROM clause (including nested parentheses in select list).
+        $selectFromPattern = '/^(\s*SELECT\s+(?:\((?>[^()]+)|(?:R)*\)|[^(])+)\sFROM\s/i';
+
+        if ( ! $orderBy) {
+            //Replace only "main" FROM with OVER to prevent changing FROM also in subqueries.
+            $query = preg_replace(
+                $selectFromPattern,
+                '$1, ROW_NUMBER() OVER (ORDER BY (SELECT 0)) AS doctrine_rownum FROM ',
+                $query,
+                1
+            );
+
+            return sprintf($format, $query, $start, $end);
+        }
+
+        //Clear ORDER BY
+        $orderBy        = preg_replace('/ORDER\s+BY\s+([^\)]*)(.*)/', '$1', $orderBy);
+        $orderByParts   = explode(',', $orderBy);
+        $orderbyColumns = array();
+
+        //Split ORDER BY into parts
+        foreach ($orderByParts as &$part) {
+
+            if (preg_match('/(([^\s]*)\.)?([^\.\s]*)\s*(ASC|DESC)?/i', trim($part), $matches)) {
+                $orderbyColumns[] = array(
+                    'column'    => $matches[3],
+                    'hasTable'  => ( ! empty($matches[2])),
+                    'sort'      => isset($matches[4]) ? $matches[4] : null,
+                    'table'     => empty($matches[2]) ? '[^\.\s]*' : $matches[2]
+                );
+            }
+        }
+
+        //Find alias for each colum used in ORDER BY
+        if ( ! empty($orderbyColumns)) {
+            foreach ($orderbyColumns as $column) {
+
+                $pattern    = sprintf('/%s\.(%s)\s*(AS)?\s*([^,\s\)]*)/i', $column['table'], $column['column']);
+                $overColumn = preg_match($pattern, $query, $matches)
+                    ? ($column['hasTable'] ? $column['table']  . '.' : '') . $column['column'] 
+                    : $column['column'];
+
+                if (isset($column['sort'])) {
+                    $overColumn .= ' ' . $column['sort'];
+                }
+
+                $overColumns[] = $overColumn;
+            }
+        }
+
+        //Replace only first occurrence of FROM with $over to prevent changing FROM also in subqueries.
+        $over  = 'ORDER BY ' . implode(', ', $overColumns);
+        $query = preg_replace($selectFromPattern, "$1, ROW_NUMBER() OVER ($over) AS doctrine_rownum FROM ", $query, 1);
+
+        return sprintf($format, $query, $start, $end);
     }
 
     /**

@@ -15,6 +15,7 @@ use Composer\Composer;
 use Composer\Installer\LibraryInstaller;
 use Composer\Script\Event;
 use Composer\Package\PackageInterface;
+use Composer\Package\AliasPackage;
 use Composer\Util\Filesystem;
 
 /**
@@ -41,6 +42,11 @@ class Installer extends LibraryInstaller
         // the root package's scripts if available.
         $rootPackage = isset($this->composer) ? $this->composer->getPackage() : null;
         if (isset($rootPackage)) {
+            // Ensure we get the root package rather than its alias.
+            while ($rootPackage instanceof AliasPackage) {
+                $rootPackage = $rootPackage->getAliasOf();
+            }
+
             // Make sure the root package can override the available scripts.
             if (method_exists($rootPackage, 'setScripts')) {
                 $scripts = $rootPackage->getScripts();
@@ -56,11 +62,12 @@ class Installer extends LibraryInstaller
     }
 
     /**
-     * {@inheritDoc}
+     * Gets the destination Component directory.
      *
-     * Components are to be installed directly into the "component-dir".
+     * @return string
+     *   The path to where the final Component should be installed.
      */
-    public function getInstallPath(PackageInterface $package)
+    public function getComponentPath(PackageInterface $package)
     {
         // Parse the pretty name for the vendor and package name.
         $name = $prettyName = $package->getPrettyName();
@@ -112,7 +119,7 @@ class Installer extends LibraryInstaller
      */
     public function removeComponent(PackageInterface $package)
     {
-        $path = $this->getInstallPath($package);
+        $path = $this->getComponentPath($package);
         return $this->filesystem->remove($path);
     }
 

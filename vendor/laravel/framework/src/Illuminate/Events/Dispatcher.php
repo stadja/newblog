@@ -40,7 +40,7 @@ class Dispatcher {
 	 */
 	public function __construct(Container $container = null)
 	{
-		$this->container = $container;
+		$this->container = $container ?: new Container;
 	}
 
 	/**
@@ -55,7 +55,7 @@ class Dispatcher {
 	{
 		if (str_contains($event, '*'))
 		{
-			return $this->setupWildcardListen($event, $listener, $priority = 0);
+			return $this->setupWildcardListen($event, $listener);
 		}
 
 		$this->listeners[$event][$priority][] = $this->makeListener($listener);
@@ -68,12 +68,11 @@ class Dispatcher {
 	 *
 	 * @param  string  $event
 	 * @param  mixed   $listener
-	 * @param  int     $priority
 	 * @return void
 	 */
-	protected function setupWildcardListen($event, $listener, $priority)
+	protected function setupWildcardListen($event, $listener)
 	{
-		$this->wildcards[$event][] = $listener;
+		$this->wildcards[$event][] = $this->makeListener($listener);
 	}
 
 	/**
@@ -161,8 +160,8 @@ class Dispatcher {
 	 *
 	 * @param  string  $event
 	 * @param  mixed   $payload
-	 * @param  boolean $halt
-	 * @return void
+	 * @param  bool    $halt
+	 * @return array|null
 	 */
 	public function fire($event, $payload = array(), $halt = false)
 	{
@@ -259,7 +258,7 @@ class Dispatcher {
 	 * Register an event listener with the dispatcher.
 	 *
 	 * @param  mixed   $listener
-	 * @return void
+	 * @return mixed
 	 */
 	public function makeListener($listener)
 	{
@@ -275,7 +274,7 @@ class Dispatcher {
 	 * Create a class based listener using the IoC container.
 	 *
 	 * @param  mixed    $listener
-	 * @return Closure
+	 * @return \Closure
 	 */
 	public function createClassListener($listener)
 	{

@@ -59,6 +59,41 @@ class PostController extends \BaseController
         return View::make('posts/posts')->with('post_views', $postViews);
     }
 
+/**
+     * Display a listing of the resource.
+     *
+     * @return Response
+     */
+    public function listposts()
+    {
+
+        die();
+        $posts = Post::with('user')->orderBy('posted_at', 'desc');
+        if (!Auth::check()) {
+            $posts = $posts->where('published');
+        } else {
+            $posts = $posts->where('published')->orWhere('author', Auth::user()->id);
+        }
+        $posts = $posts->take($this->limit)->get();
+        $postViews = array();
+        foreach ($posts as $post) {
+            $view = (!Auth::check()) ? Cache::section('posts')->rememberForever(
+                'view_'.$post->id, function() use($post)
+                {
+                    return View::make('posts/post-unique')->with('post', $post)
+                                                                             ->with('display', '')
+                                                                             ->render();
+                }
+            ) : View::make('posts/post-unique')->with('post', $post)->with('display', '')->render();
+            $postViews[] = $view;
+        }
+
+        Resources::set_js('posts.js');
+
+// var_dump($postViews);
+// die();
+        return View::make('posts/posts')->with('post_views', $postViews);
+    }
 
     /**
      * Display a listing of the resource.

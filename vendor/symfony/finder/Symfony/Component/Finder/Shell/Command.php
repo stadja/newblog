@@ -187,7 +187,7 @@ class Command
     public function get($label)
     {
         if (!isset($this->labels[$label])) {
-            throw new \RuntimeException(sprintf('Label "%s" does not exists.', $label));
+            throw new \RuntimeException(sprintf('Label "%s" does not exist.', $label));
         }
 
         return $this->bits[$this->labels[$label]];
@@ -272,10 +272,10 @@ class Command
     public function join()
     {
         return implode(' ', array_filter(
-            array_map(function($bit) {
+            array_map(function ($bit) {
                 return $bit instanceof Command ? $bit->join() : ($bit ?: null);
             }, $this->bits),
-            function($bit) { return null !== $bit; }
+            function ($bit) { return null !== $bit; }
         ));
     }
 

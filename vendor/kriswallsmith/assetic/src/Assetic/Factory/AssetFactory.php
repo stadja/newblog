@@ -3,7 +3,7 @@
 /*
  * This file is part of the Assetic package, an OpenSky project.
  *
- * (c) 2010-2013 OpenSky Project Inc
+ * (c) 2010-2014 OpenSky Project Inc
  *
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
@@ -250,34 +250,33 @@ class AssetFactory
 
     public function getLastModified(AssetInterface $asset)
     {
-        $mtime = $asset->getLastModified();
-        if (!$filters = $asset->getFilters()) {
-            return $mtime;
-        }
+        $mtime = 0;
+        foreach ($asset instanceof AssetCollectionInterface ? $asset : array($asset) as $leaf) {
+            $mtime = max($mtime, $leaf->getLastModified());
 
-        // prepare load path
-        $sourceRoot = $asset->getSourceRoot();
-        $sourcePath = $asset->getSourcePath();
-        $loadPath = $sourceRoot && $sourcePath ? dirname($sourceRoot.'/'.$sourcePath) : null;
-
-        $prevFilters = array();
-        foreach ($filters as $filter) {
-            $prevFilters[] = $filter;
-
-            if (!$filter instanceof DependencyExtractorInterface) {
+            if (!$filters = $leaf->getFilters()) {
                 continue;
             }
 
-            // extract children from asset after running all preceeding filters
-            $clone = clone $asset;
-            $clone->clearFilters();
-            foreach (array_slice($prevFilters, 0, -1) as $prevFilter) {
-                $clone->ensureFilter($prevFilter);
-            }
-            $clone->load();
+            $prevFilters = array();
+            foreach ($filters as $filter) {
+                $prevFilters[] = $filter;
 
-            foreach ($filter->getChildren($this, $clone->getContent(), $loadPath) as $child) {
-                $mtime = max($mtime, $this->getLastModified($child));
+                if (!$filter instanceof DependencyExtractorInterface) {
+                    continue;
+                }
+
+                // extract children from leaf after running all preceeding filters
+                $clone = clone $leaf;
+                $clone->clearFilters();
+                foreach (array_slice($prevFilters, 0, -1) as $prevFilter) {
+                    $clone->ensureFilter($prevFilter);
+                }
+                $clone->load();
+
+                foreach ($filter->getChildren($this, $clone->getContent(), $clone->getSourceDirectory()) as $child) {
+                    $mtime = max($mtime, $this->getLastModified($child));
+                }
             }
         }
 

@@ -1,3 +1,38 @@
+### 1.7.0 (2013-11-14)
+
+  * Added ElasticSearchHandler to send logs to an Elastic Search server
+  * Added DynamoDbHandler and ScalarFormatter to send logs to Amazon's Dynamo DB
+  * Added SyslogUdpHandler to send logs to a remote syslogd server
+  * Added LogglyHandler to send logs to a Loggly account
+  * Added $level to IntrospectionProcessor so it only adds backtraces when needed
+  * Added $version to LogstashFormatter to allow using the new v1 Logstash format
+  * Added $appName to NewRelicHandler
+  * Added configuration of Pushover notification retries/expiry
+  * Added $maxColumnWidth to NativeMailerHandler to change the 70 chars default
+  * Added chainability to most setters for all handlers
+  * Fixed RavenHandler batch processing so it takes the message from the record with highest priority
+  * Fixed HipChatHandler batch processing so it sends all messages at once
+  * Fixed issues with eAccelerator
+  * Fixed and improved many small things
+
+### 1.6.0 (2013-07-29)
+
+  * Added HipChatHandler to send logs to a HipChat chat room
+  * Added ErrorLogHandler to send logs to PHP's error_log function
+  * Added NewRelicHandler to send logs to NewRelic's service
+  * Added Monolog\ErrorHandler helper class to register a Logger as exception/error/fatal handler
+  * Added ChannelLevelActivationStrategy for the FingersCrossedHandler to customize levels by channel
+  * Added stack traces output when normalizing exceptions (json output & co)
+  * Added Monolog\Logger::API constant (currently 1)
+  * Added support for ChromePHP's v4.0 extension
+  * Added support for message priorities in PushoverHandler, see $highPriorityLevel and $emergencyLevel
+  * Added support for sending messages to multiple users at once with the PushoverHandler
+  * Fixed RavenHandler's support for batch sending of messages (when behind a Buffer or FingersCrossedHandler)
+  * Fixed normalization of Traversables with very large data sets, only the first 1000 items are shown now
+  * Fixed issue in RotatingFileHandler when an open_basedir restriction is active
+  * Fixed minor issues in RavenHandler and bumped the API to Raven 0.5.0
+  * Fixed SyslogHandler issue when many were used concurrently with different facilities
+
 ### 1.5.0 (2013-04-23)
 
   * Added ProcessIdProcessor to inject the PID in log records

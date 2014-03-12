@@ -19,7 +19,7 @@ class Translator extends NamespacedItemResolver implements TranslatorInterface {
 	 *
 	 * @var string
 	 */
-	protected $default;
+	protected $locale;
 
 	/**
 	 * The array of loaded translation groups.
@@ -61,7 +61,7 @@ class Translator extends NamespacedItemResolver implements TranslatorInterface {
 	 * @param  string  $locale
 	 * @return string
 	 */
-	public function get($key, $replace = array(), $locale = null)
+	public function get($key, array $replace = array(), $locale = null)
 	{
 		list($namespace, $group, $item) = $this->parseKey($key);
 
@@ -94,11 +94,18 @@ class Translator extends NamespacedItemResolver implements TranslatorInterface {
 	 * @param  array   $replace
 	 * @return string|null
 	 */
-	protected function getLine($namespace, $group, $locale, $item, $replace)
+	protected function getLine($namespace, $group, $locale, $item, array $replace)
 	{
 		$line = array_get($this->loaded[$namespace][$group][$locale], $item);
 
-		if ($line) return $this->makeReplacements($line, $replace);
+		if (is_string($line))
+		{
+			return $this->makeReplacements($line, $replace);
+		}
+		elseif (is_array($line) and count($line) > 0)
+		{
+			return $line;
+		}
 	}
 
 	/**
@@ -108,7 +115,7 @@ class Translator extends NamespacedItemResolver implements TranslatorInterface {
 	 * @param  array   $replace
 	 * @return string
 	 */
-	protected function makeReplacements($line, $replace)
+	protected function makeReplacements($line, array $replace)
 	{
 		$replace = $this->sortReplacements($replace);
 
@@ -126,7 +133,7 @@ class Translator extends NamespacedItemResolver implements TranslatorInterface {
 	 * @param  array  $replace
 	 * @return array
 	 */
-	protected function sortReplacements($replace)
+	protected function sortReplacements(array $replace)
 	{
 		return with(new Collection($replace))->sortBy(function($r)
 		{
@@ -143,11 +150,11 @@ class Translator extends NamespacedItemResolver implements TranslatorInterface {
 	 * @param  string  $locale
 	 * @return string
 	 */
-	public function choice($key, $number, $replace = array(), $locale = null)
+	public function choice($key, $number, array $replace = array(), $locale = null)
 	{
 		$line = $this->get($key, $replace, $locale = $locale ?: $this->locale);
 
-		array_unshift($replace, $number);
+		$replace['count'] = $number;
 
 		return $this->makeReplacements($this->getSelector()->choose($line, $number, $locale), $replace);
 	}
@@ -187,7 +194,7 @@ class Translator extends NamespacedItemResolver implements TranslatorInterface {
 	 * @param  string  $namespace
 	 * @param  string  $group
 	 * @param  string  $locale
-	 * @return string
+	 * @return void
 	 */
 	public function load($namespace, $group, $locale)
 	{

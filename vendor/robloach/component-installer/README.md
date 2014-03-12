@@ -58,7 +58,7 @@ There are a number of ways to alter how Components are installed and used.
 
 ### Installation Directory
 
-It is posssible to switch where Components are installed by changing the
+It is possible to switch where Components are installed by changing the
 `component-dir` option in your root *composer.json*'s `config`. The following
 will install jQuery to *public/jquery* rather than *components/jquery*:
 
@@ -226,7 +226,7 @@ define use of [html5shiv](https://github.com/aFarkas/html5shiv):
                         "scripts": [
                             "dist/html5shiv.js"
                         ]
-                    },
+                    }
                 },
                 "require": {
                     "robloach/component-installer": "*"
@@ -234,6 +234,26 @@ define use of [html5shiv](https://github.com/aFarkas/html5shiv):
             }
         }
     ]
+}
+```
+
+### Backwards Compatibility
+
+Newer versions of composer made backwards incompatible changes to the way
+plugins work. In order for `components-installer` to work on newer versions of
+composer, a backwards incompatibile fix had to be made. If you are using an
+older version of composer, please make sure to explicitly require version
+`0.0.12` in your root `composer.json` file. Example:
+
+``` json
+{
+    "require": {
+	"robloach/component-installer": "0.0.12",
+        "components/jquery": "*"
+    },
+    "config": {
+        "component-dir": "public"
+    }
 }
 ```
 

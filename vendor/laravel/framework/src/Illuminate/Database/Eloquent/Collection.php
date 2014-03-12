@@ -13,7 +13,7 @@ class Collection extends BaseCollection {
 	 */
 	public function find($key, $default = null)
 	{
-		return array_first($this->items, function($key, $model) use ($key)
+		return array_first($this->items, function($itemKey, $model) use ($key)
 		{
 			return $model->getKey() == $key;
 
@@ -23,17 +23,21 @@ class Collection extends BaseCollection {
 	/**
 	 * Load a set of relationships onto the collection.
 	 *
-	 * @param  dynamic  string
-	 * @return void
+	 * @param  dynamic  $relations
+	 * @return \Illuminate\Database\Eloquent\Collection
 	 */
-	public function load()
+	public function load($relations)
 	{
 		if (count($this->items) > 0)
 		{
-			$query = $this->first()->newQuery()->with(func_get_args());
+			if (is_string($relations)) $relations = func_get_args();
+
+			$query = $this->first()->newQuery()->with($relations);
 
 			$this->items = $query->eagerLoadRelations($this->items);
 		}
+
+		return $this;
 	}
 
 	/**
@@ -61,32 +65,42 @@ class Collection extends BaseCollection {
 	}
 
 	/**
-	 * Get an array with the values of a given key.
+	 * Fetch a nested element of the collection.
 	 *
-	 * @param  string  $column
 	 * @param  string  $key
-	 * @return array
+	 * @return \Illuminate\Support\Collection
 	 */
-	public function lists($value, $key = null)
+	public function fetch($key)
 	{
-		$results = array();
+		return new static(array_fetch($this->toArray(), $key));
+	}
 
-		foreach ($this->items as $item)
+	/**
+	 * Get the max value of a given key.
+	 *
+	 * @param  string  $key
+	 * @return mixed
+	 */
+	public function max($key)
+	{
+		return $this->reduce(function($result, $item) use ($key)
 		{
-			// If the key is "null", we will just append the value to the array and keep
-			// looping. Otherwise we will key the array using the value of the key we
-			// received from the developer. Then we'll return the final array form.
-			if (is_null($key))
-			{
-				$results[] = $item->{$value};
-			}
-			else
-			{
-				$results[$item->{$key}] = $item->{$value};
-			}
-		}
+			return (is_null($result) or $item->{$key} > $result) ? $item->{$key} : $result;
+		});
+	}
 
-		return $results;
+	/**
+	 * Get the min value of a given key.
+	 *
+	 * @param  string  $key
+	 * @return mixed
+	 */
+	public function min($key)
+	{
+		return $this->reduce(function($result, $item) use ($key)
+		{
+			return (is_null($result) or $item->{$key} < $result) ? $item->{$key} : $result;
+		});
 	}
 
 	/**
