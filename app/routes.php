@@ -37,6 +37,16 @@ Route::filter(
     }
 );
 
+Route::group(
+    array('prefix' => 'posts'), function()
+    {
+        Route::get('list_all', 'PostController@listAll');
+        Route::get('list_all/{offset}', 'PostController@listAll');
+        Route::get('create', array('before' => 'auth', 'uses' => 'PostController@create'));
+        Route::get('offset/{offset}', 'PostController@offset');
+        Route::any('by_network', array('before' => 'auth_post', 'uses' => 'PostController@by_network'));
+    }
+);
 Route::resource('posts', 'PostController');
 
 Route::get(
@@ -46,23 +56,11 @@ Route::get(
     }
 );
 
-Route::group(
-    array('prefix' => 'posts'), function()
-    {
-        Route::get('list', array('before' => 'auth', 'uses' => 'PostController@create'));
-
-        Route::get('create', array('before' => 'auth', 'uses' => 'PostController@create'));
-        Route::get('{id}/edit', array('before' => 'auth', 'uses' => 'PostController@edit'));
-        Route::get('offset/{offset}', 'PostController@offset');
-        Route::put('{id}/edit', array('before' => 'auth', 'uses' => 'PostController@update'));
-        Route::post('/', array('before' => 'auth', 'uses' => 'PostController@store'));
-        Route::any('by_network', array('before' => 'auth_post', 'uses' => 'PostController@by_network'));
-    }
-);
 
 Route::get('flush', 'PostController@flush');
 Route::get('rss.xml', 'PostController@rss');
 Route::get('/', 'PostController@index');
+
 
 
 Route::group(

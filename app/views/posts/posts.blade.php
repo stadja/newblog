@@ -35,6 +35,22 @@
     <div class="span9" style="margin: 0;">
         <div class='bottom-fleche'></div>
     </div>
+
+        </div>
+        <div class="row">
+        <div class="span" style='text-align: right'>
+            @if (isset($next_offset) || isset($prev_offset) )
+                @if ($offset !== '0')
+                 <a href="/posts/list_all/{{ $prev_offset }}">&lt;-</a>
+                @endif
+                ||
+                @if (isset($next_offset))
+                    <a href="/posts/list_all/{{ $next_offset }}">-&gt;</a>
+                @endif
+            @else
+            <a href="/posts/list_all">Voir tous les articles</a>
+            @endif
+        </div>
 </div>
 
 

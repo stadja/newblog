@@ -34,6 +34,22 @@
     <div class="span9" style="margin: 0;">
         <div class='bottom-fleche'></div>
     </div>
+
+        </div>
+        <div class="row">
+        <div class="span" style='text-align: right'>
+            <?php if (isset($next_offset) || isset($prev_offset) ): ?>
+                <?php if ($offset !== '0'): ?>
+                 <a href="/posts/list_all/<?php echo $prev_offset; ?>">&lt;-</a>
+                <?php endif; ?>
+                ||
+                <?php if (isset($next_offset)): ?>
+                    <a href="/posts/list_all/<?php echo $next_offset; ?>">-&gt;</a>
+                <?php endif; ?>
+            <?php else: ?>
+            <a href="/posts/list_all">Voir tous les articles</a>
+            <?php endif; ?>
+        </div>
 </div>
 
 

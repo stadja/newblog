@@ -4,6 +4,7 @@ class PostController extends \BaseController
 {
 
     var $limit = 1;
+    var $listAllLimit = 10;
 
     public function __construct()
     {
@@ -25,6 +26,19 @@ class PostController extends \BaseController
         }
     }
 
+    public function listAll($offset = '0')
+    {
+        $postViews =  _getPost($this->listAllLimit, $offset);
+        Resources::set_js('posts.js');
+        $view = View::make('posts/posts')->with('post_views', $postViews);
+        if (count($postViews) == $this->listAllLimit) {
+            $view = $view->with('next_offset', $offset + count($postViews));
+        }
+        $view = $view->with('prev_offset', (($offset - $this->listAllLimit) > 0) ? ($offset - $this->listAllLimit) : 0);
+        $view = $view->with('offset', $offset);
+        return $view;
+    }
+
     /**
      * Display a listing of the resource.
      *
@@ -32,66 +46,8 @@ class PostController extends \BaseController
      */
     public function index()
     {
-        $posts = Post::with('user')->orderBy('posted_at', 'desc');
-        if (!Auth::check()) {
-            $posts = $posts->where('published', 1);
-        } else {
-            $posts = $posts->where('published', 1)->orWhere('author', Auth::user()->id);
-        }
-        $posts = $posts->take($this->limit)->get();
-        $postViews = array();
-        foreach ($posts as $post) {
-            $view = (!Auth::check()) ? Cache::section('posts')->rememberForever(
-                'view_'.$post->id, function() use($post)
-                {
-                    return View::make('posts/post-unique')->with('post', $post)
-                                                                             ->with('display', '')
-                                                                             ->render();
-                }
-            ) : View::make('posts/post-unique')->with('post', $post)->with('display', '')->render();
-            $postViews[] = $view;
-        }
-
+        $postViews =  _getPost($this->limit);
         Resources::set_js('posts.js');
-
-// var_dump($postViews);
-// die();
-        return View::make('posts/posts')->with('post_views', $postViews);
-    }
-
-/**
-     * Display a listing of the resource.
-     *
-     * @return Response
-     */
-    public function listposts()
-    {
-
-        die();
-        $posts = Post::with('user')->orderBy('posted_at', 'desc');
-        if (!Auth::check()) {
-            $posts = $posts->where('published');
-        } else {
-            $posts = $posts->where('published')->orWhere('author', Auth::user()->id);
-        }
-        $posts = $posts->take($this->limit)->get();
-        $postViews = array();
-        foreach ($posts as $post) {
-            $view = (!Auth::check()) ? Cache::section('posts')->rememberForever(
-                'view_'.$post->id, function() use($post)
-                {
-                    return View::make('posts/post-unique')->with('post', $post)
-                                                                             ->with('display', '')
-                                                                             ->render();
-                }
-            ) : View::make('posts/post-unique')->with('post', $post)->with('display', '')->render();
-            $postViews[] = $view;
-        }
-
-        Resources::set_js('posts.js');
-
-// var_dump($postViews);
-// die();
         return View::make('posts/posts')->with('post_views', $postViews);
     }
 
@@ -114,7 +70,6 @@ class PostController extends \BaseController
         return Response::json(array('count' => sizeof($postViews), 'html' => $postViews));
     }
 
-
     /**
      * Show the form for creating a new resource.
      *
@@ -133,7 +88,6 @@ class PostController extends \BaseController
      */
     public function show($id)
     {
-
         $postViews = array();
         $view = '';
         $post = Post::with('user')->find($id);
@@ -158,7 +112,6 @@ class PostController extends \BaseController
 
         return View::make('posts/posts')->with('post_views', $postViews)->with('title', $post->title);
     }
-
 
     /**
      * Show the form for editing the specified resource.
@@ -238,7 +191,6 @@ class PostController extends \BaseController
 
         $post->author = Auth::user()->id;
 
-
         $post->save();
         $this->_flush();
         return 'ok';
@@ -306,8 +258,6 @@ class PostController extends \BaseController
 
 }
 
-
-
 /**
  * Display a listing of the resource.
  *
@@ -315,25 +265,30 @@ class PostController extends \BaseController
  */
 function _offset($offset, $limit)
 {
+    $postViews =  _getPost($limit, $offset);
+    return $postViews;
+}
+
+function _getPost($limit, $offset = 0)
+{
     $posts = Post::with('user')->orderBy('posted_at', 'desc');
     if (!Auth::check()) {
         $posts = $posts->where('published', 1);
     } else {
         $posts = $posts->where('published', 1)->orWhere('author', Auth::user()->id);
     }
-
     $posts = $posts->take($limit)->skip($offset)->get();
-
     $postViews = array();
     foreach ($posts as $post) {
         $view = (!Auth::check()) ? Cache::section('posts')->rememberForever(
             'view_'.$post->id, function() use($post)
             {
-                return View::make('posts/post-unique')->with('post', $post)->with('display', '')->render();
+                return View::make('posts/post-unique')->with('post', $post)
+                ->with('display', '')
+                ->render();
             }
         ) : View::make('posts/post-unique')->with('post', $post)->with('display', '')->render();
         $postViews[] = $view;
     }
-
     return $postViews;
 }
